@@ -1,0 +1,37 @@
+<launch>
+    <!-- webots -->
+    <arg name="no_gui" default="false" doc="Start Webots with minimal GUI" />
+    <include file="$(find webots_ros)/launch/webots.launch">
+        <arg name="mode" value="realtime" />
+        <arg name="no_gui" value="$(arg no_gui)" />
+        <arg name="world" value="$(find teach_repeat)/worlds/tb3_wbt.wbt" />
+    </include>
+
+    <!-- tb3 -->
+    <group ns="tb3">
+        <!-- robot state publisher -->
+        <node pkg="robot_state_publisher" type="robot_state_publisher" name="tb3_state_publisher" respawn="true" respawn_delay="5" />
+
+        <!-- coordinate system fix -->
+        <node pkg="tf" type="static_transform_publisher" name="tb3_lidar_tf" args="0 0 0 0 0 3.14159 'LDS-01' 'tb3/LDS_01' 100" />
+
+        <!-- diff drive controller -->
+        <rosparam>
+            controller:
+                type: "diff_drive_controller/DiffDriveController"
+                left_wheel: ['left wheel motor']
+                right_wheel: ['right wheel motor']
+                pose_covariance_diagonal: [0.001, 0.001, 1000000.0, 1000000.0, 1000000.0, 0.03]
+                twist_covariance_diagonal: [0.001, 0.001, 1000000.0, 1000000.0, 1000000.0, 0.03]
+        </rosparam>
+		<node name="controller_spawner" pkg="controller_manager" type="spawner" output="screen" args="controller" />
+
+        <!-- rqt_controller_manager -->
+        <node name="rqt_controller_manager" pkg="rqt_controller_manager" type="rqt_controller_manager" output="screen" />
+	</group>
+
+    <!-- rviz -->
+    <arg name="rviz" default="true" />
+    <arg name="rviz_config" default="$(find teach_repeat)/rviz/tb3_wbt.rviz" />
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rviz_config)" if="$(arg rviz)" />
+</launch>

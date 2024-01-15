@@ -1,0 +1,7 @@
+<launch>
+    <!-- gmapping -->
+    <node name="gmapping" pkg="gmapping" type="slam_gmapping" output="screen">
+        <remap from="scan" to="/tb3/LDS_01/laser_scan" />
+        <param name="delta" value="0.03" />
+    </node>
+</launch>

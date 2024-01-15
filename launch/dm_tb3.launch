@@ -1,0 +1,84 @@
+<launch>
+    <!-- global arguments -->
+    <arg name="cmd_vel_topic" default="/tb3/controller/cmd_vel" />
+    <arg name="odom_topic" default="/tb3/controller/odom" />
+    <arg name="image_topic" default="/tb3/camera/image" />
+    
+	<arg name="odom_corruption" default="false" />
+	<arg name="odom_translation_corruption_factor" default="0.1" />
+	<arg name="odom_rotation_corruption_factor" default="0.1" />
+
+    <arg name="repeat_name" default="0" />
+    <arg name="load_path" />
+    <!-- <arg name="load_path" default="~/MyFiles/Workspace/tr_data/2023-12-07_22:28:59" /> -->
+    <arg name="save_path" default="$(arg load_path)/repeat_$(arg repeat_name)" />
+
+	<!-- global params -->
+	<param name="data_load_dir" value="$(arg load_path)" />
+	<param name="data_save_dir" value="$(arg save_path)" />
+	<param name="wait_for_ready" value="false" />
+	<param name="image_resize_width" value="100" />
+	<param name="image_resize_height" value="50" />
+	<param name="image_subsampling" value="1" />
+	<param name="image_field_of_view_width_deg" value="114.59" />
+	<param name="patch_size" value="(9,9)" />
+	<param name="image_recognition_threshold" value="0.1" />
+	<param name="goal_pose_separation" value="0.2" />
+	<param name="lookahead_distance_ratio" value="0.65" />
+	<param name="turning_target_range_distance_ratio" value="0.2" />
+	<param name="goal_theta_tolerance" value="15" />
+	<param name="save_full_res_images" value="false" />
+	<param name="save_full_res_images_at_goal" value="false" />
+	<param name="save_gt_data" value="true" />
+	<param name="publish_gt_goals" value="true" />
+
+	<!-- odom corrupter (only start when odom_corruption is true) -->
+	<node pkg="teach_repeat" type="odom_corrupter.py" name="odom_corrupter" output="screen" if="$(arg odom_corruption)">
+		<remap from="cmd_vel" to="$(arg cmd_vel_topic)" />
+		<remap from="odom" to="$(arg odom_topic)" />
+
+		<param name="translation_error_factor" value="$(arg odom_translation_corruption_factor)" />
+		<param name="rotation_error_factor" value="$(arg odom_rotation_corruption_factor)" />
+	</node>
+
+	<!-- load image files for matching -->
+	<node pkg="teach_repeat" type="image_matcher.py" name="image_matcher" output="screen" >
+		<param name="use_old_dataset_format" value="false" />
+		<param name="use_depth" value="false" />
+		<param name="use_middle_weighting" value="false" />
+	</node>
+
+	<!-- follow the previous poses using odometry, but use images to correct for odometry drift -->
+	<node pkg="teach_repeat" type="localiser.py" name="localiser" output="screen" >
+		<remap from="odom" to="$(arg odom_topic)" unless="$(arg odom_corruption)" />
+		<remap from="odom" to="/odom_corrupted" if="$(arg odom_corruption)" />
+		<remap from="image" to="$(arg image_topic)" />
+
+		<param name="stop_at_end" value="true" />
+		<param name="discrete-correction" value="false" />
+		<param name="search-range" value="3" />
+		<param name="global_localisation_init" value="true" />
+		<param name="min_init_correlation" value="0.5" />
+		<param name="rotation_correction_gain" value="0.02" />
+		<param name="path_correction_gain" value="0.01" />
+	</node>
+
+	<!-- republish the goal as a PoseStamped if we need (send to move_base) -->
+	<node pkg="topic_tools" type="transform" name="goal_repub" args="/goal goalPose geometry_msgs/PoseStamped m.pose"/>
+
+	<!-- drive to goal pose -->
+	<node pkg="teach_repeat" type="drive_to_pose_controller.py" name="drive_to_pose" output="screen" >
+		<remap from="cmd_vel" to="$(arg cmd_vel_topic)" />
+		<remap from="odom" to="$(arg odom_topic)" unless="$(arg odom_corruption)" />
+		<remap from="odom" to="/odom_corrupted" if="$(arg odom_corruption)" />
+
+		<param name="min_omega" value="0.15" />
+		<param name="max_omega" value="0.93" />
+		<param name="max_v" value="0.35" />
+	</node>
+
+	<!-- show image matching -->
+	<node pkg="image_view" type="image_view" name="image_match_debug_view" >
+		<remap from="image" to="match_image_debug" />
+	</node>
+</launch>
