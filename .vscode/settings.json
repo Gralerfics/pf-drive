@@ -1,0 +1,12 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/home/gralerfics/MyFiles/Workspace/tr_ws/devel/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages",
+        "./src"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/gralerfics/MyFiles/Workspace/tr_ws/devel/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages",
+        "./src"
+    ]
+}
