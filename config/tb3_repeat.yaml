@@ -1,11 +1,11 @@
 tr:
     camera:
         raw_image_topic: /tb3/camera/image
-        processed_image_topic: /tr/camera/processed_image
+        processed_image_topic: /tr/camera/processed_image # debug
         patch_size: [9, 9]
         resize: [100, 50] # [width, height]
     odometry:
         odom_topic: /tb3/controller/odom
-        processed_odom_topic: /tr/odometry/processed_odom
+        processed_odom_topic: /tr/odometry/processed_odom # debug
     controller:
         cmd_vel_topic: /tb3/controller/cmd_vel

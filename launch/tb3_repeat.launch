@@ -4,7 +4,5 @@
 	<param name="/tr/persistent/recording_path" value="$(arg recording)" />
 	<rosparam file="$(find tr_drive)/config/tb3_repeat.yaml" command="load" />
 
-	<node pkg="tr_drive" type="camera_node.py" name="camera" output="screen" />
-	<node pkg="tr_drive" type="odometry_node.py" name="odometry" output="screen" />
 	<node pkg="tr_drive" type="repeater_node.py" name="repeater" output="screen" />
 </launch>
