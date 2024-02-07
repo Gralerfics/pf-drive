@@ -1,31 +1,10 @@
 <launch>
-    <!-- global arguments -->
-    <!-- <arg name="cmd_vel_topic" default="/tb3/controller/cmd_vel" />
-    <arg name="odom_topic" default="/tb3/controller/odom" />
-    <arg name="image_topic" default="/tb3/camera/image" />
-    
-	<arg name="odom_corruption" default="false" />
-	<arg name="odom_translation_corruption_factor" default="0.1" />
-	<arg name="odom_rotation_corruption_factor" default="0.1" />
+    <arg name="recording" />
 
-    <arg name="repeat_name" default="0" />
-    <arg name="load_path" />
-    <arg name="save_path" default="$(arg load_path)/repeat_$(arg repeat_name)" /> -->
+	<param name="/tr/persistent/recording_path" value="$(arg recording)" />
+	<rosparam file="$(find tr_drive)/config/tb3_repeat.yaml" command="load" />
 
-	<!-- global params -->
-	<!-- <param name="data_load_dir" value="$(arg load_path)" />
-	<param name="data_save_dir" value="$(arg save_path)" /> -->
-
+	<node pkg="tr_drive" type="camera_node.py" name="camera" output="screen" />
+	<node pkg="tr_drive" type="odometry_node.py" name="odometry" output="screen" />
 	<node pkg="tr_drive" type="repeater_node.py" name="repeater" output="screen" />
-
-	<!-- drive to goal pose -->
-	<!-- <node pkg="teach_repeat" type="drive_to_pose_controller.py" name="drive_to_pose" output="screen" >
-		<remap from="cmd_vel" to="$(arg cmd_vel_topic)" />
-		<remap from="odom" to="$(arg odom_topic)" unless="$(arg odom_corruption)" />
-		<remap from="odom" to="/odom_corrupted" if="$(arg odom_corruption)" />
-
-		<param name="min_omega" value="0.15" />
-		<param name="max_omega" value="0.93" />
-		<param name="max_v" value="0.35" />
-	</node> -->
 </launch>

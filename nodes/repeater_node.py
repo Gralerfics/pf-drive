@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-from tr_drive.repeater import Repeater
+from tr_drive.operator.repeater import Repeater
 
 repeater = Repeater()
-repeater.launch()
+repeater.spin()
 
