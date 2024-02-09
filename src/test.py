@@ -32,10 +32,10 @@ C = A.I * B
 print(C.to_Pose())
 
 print(tfc.fromMsg(a.pose.pose))
-print(A.q.to_rotation_matrix())
+print(A.quaternion.to_rotation_matrix())
 
 print(Quat.from_rotation_vector(Vec3(0, 0, np.pi)))
 # print(Quat.from_euler(14.454, 11.225, 14.454))
-print(B.q.to_euler() / np.pi * 180)
-print(A.q.to_rotation_vector())
+print(B.quaternion.to_euler() / np.pi * 180)
+print(A.quaternion.to_rotation_vector())
 

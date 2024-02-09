@@ -28,9 +28,13 @@ class Vec3:
         return Vec3(self.x * other, self.y * other, self.z * other)
     
     def __truediv__(self, other: float):
+        if other == 0:
+            raise ValueError("Division by zero")
         return Vec3(self.x / other, self.y / other, self.z / other)
     
     def __floordiv__(self, other: float):
+        if other == 0:
+            raise ValueError("Division by zero")
         return Vec3(self.x // other, self.y // other, self.z // other)
     
     def __str__(self):
@@ -105,6 +109,8 @@ class Quat:
         )
     
     def __truediv__(self, other: float):
+        if other == 0:
+            raise ValueError("Division by zero")
         return Quat(self.x / other, self.y / other, self.z / other, self.w / other)
     
     def __str__(self):
@@ -148,14 +154,14 @@ class Quat:
     def to_np(self):
         return np.array([self.x, self.y, self.z, self.w])
     
-    def to_euler(self):
+    def to_euler(self): # TODO: validate.
         # RPY; ZYX order
         roll = np.arctan2(2 * (self.w * self.x + self.y * self.z), 1 - 2 * (self.x ** 2 + self.y ** 2))
         pitch = np.arcsin(2 * (self.w * self.y - self.z * self.x))
         yaw = np.arctan2(2 * (self.w * self.z + self.x * self.y), 1 - 2 * (self.y ** 2 + self.z ** 2))
         return np.array([roll, pitch, yaw])
     
-    def to_rotation_matrix(self):
+    def to_rotation_matrix(self): # TODO: validate.
         x, y, z, w = self.to_list()
         return Mat3([
             [1 - 2 * (y ** 2 + z ** 2), 2 * (x * y - z * w), 2 * (x * z + y * w)],
@@ -163,10 +169,13 @@ class Quat:
             [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x ** 2 + y ** 2)]
         ])
     
-    def to_rotation_vector(self):
+    def to_rotation_vector(self): # TODO: validate.
         theta = 2 * np.arccos(self.w)
         n = Vec3([self.x, self.y, self.z]).normalize()
         return n * theta
+    
+    def validate(self):
+        return abs(self.norm() - 1) < 1e-6
 
     def inverse(self):
         return self.conjugate() / self.norm() ** 2
@@ -187,16 +196,16 @@ class Quat:
 class Frame:
     def __init__(self, *args):
         if len(args) == 0:
-            self.t = Vec3()
-            self.q = Quat()
+            self.translation = Vec3()
+            self.quaternion = Quat()
         elif len(args) == 1 and isinstance(args[0], Pose):
             frame = Frame.from_Pose(args[0])
-            self.t, self.q = frame.t, frame.q
+            self.translation, self.quaternion = frame.translation, frame.quaternion
         elif len(args) == 1 and isinstance(args[0], Odometry):
             frame = Frame.from_Odometry(args[0])
-            self.t, self.q = frame.t, frame.q
+            self.translation, self.quaternion = frame.translation, frame.quaternion
         elif len(args) == 2: # and isinstance(args[0], Vec3) and isinstance(args[1], Quat):
-            self.t, self.q = args
+            self.translation, self.quaternion = args
         else:
             raise ValueError("Invalid arguments")
     
@@ -204,7 +213,15 @@ class Frame:
         return self.transform(other)
     
     def __str__(self):
-        return f'Frame[t = {self.t}, q = {self.q}]'
+        return f'Frame[t = {self.translation}, q = {self.quaternion}]'
+    
+    @property
+    def t(self):
+        return self.translation
+    
+    @property
+    def q(self):
+        return self.quaternion
     
     @property
     def I(self):
@@ -213,8 +230,11 @@ class Frame:
     @staticmethod
     def from_Pose(msg: Pose):
         res = Frame()
-        res.t = Vec3([msg.position.x, msg.position.y, msg.position.z])
-        res.q = Quat([msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w])
+        res.translation = Vec3([msg.position.x, msg.position.y, msg.position.z])
+        res.quaternion = Quat([msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w])
+        if not res.quaternion.validate():
+            # raise ValueError("Invalid quaternion")
+            res.quaternion = Quat(0, 0, 0, 1)
         return res
     
     @staticmethod
@@ -223,21 +243,21 @@ class Frame:
     
     def to_Pose(self):
         msg = Pose()
-        msg.position.x, msg.position.y, msg.position.z = self.t.to_list()
-        msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w = self.q.to_list()
+        msg.position.x, msg.position.y, msg.position.z = self.translation.to_list()
+        msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w = self.quaternion.to_list()
         return msg
     
     def to_Odometry(self):
         msg = Odometry()
         # TODO: header
-        msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z = self.t.to_list()
-        msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w = self.q.to_list()
+        msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z = self.translation.to_list()
+        msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w = self.quaternion.to_list()
         return msg
     
     def inverse(self):
-        q_inv = self.q.I
-        return Frame(-q_inv.rotate(self.t), q_inv)
+        q_inv = self.quaternion.I
+        return Frame(-q_inv.rotate(self.translation), q_inv)
     
     def transform(self, other: 'Frame'):
-        return Frame(self.t + self.q.rotate(other.t), self.q * other.q)
+        return Frame(self.translation + self.quaternion.rotate(other.translation), self.quaternion * other.quaternion)
 
