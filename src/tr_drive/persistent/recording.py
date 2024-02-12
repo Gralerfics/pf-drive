@@ -73,6 +73,7 @@ class Recording:
         
         # load odometry
         odom_folder = path + recording.params['folders']['odom']
+        print(odom_folder)
         for filename in os.listdir():
             if filename.endswith('.json'):
                 with open(odom_folder + '/' + filename, 'r') as f:
@@ -106,7 +107,7 @@ class Recording:
         odom_folder = path + self.params['folders']['odom']
         os.makedirs(odom_folder, exist_ok = False)
         for i, odom in enumerate(self.odoms):
-            with open(odom_folder + '/' + str(i) + '.json', 'w') as f:
+            with open(odom_folder + '/' + str(i).zfill(self.ZERO_FILL_LENGTH) + '.json', 'w') as f:
                 json.dump(odom.to_dict(), f)
     
     def set_raw_image_folder(self, folder): # pass None to disable
