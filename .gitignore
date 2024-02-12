@@ -1,0 +1,6 @@
+src/tr_drive/__pycache__
+src/tr_drive/controller/__pycache__
+src/tr_drive/operator/__pycache__
+src/tr_drive/persistent/__pycache__
+src/tr_drive/sensor/__pycache__
+src/tr_drive/util/__pycache__
