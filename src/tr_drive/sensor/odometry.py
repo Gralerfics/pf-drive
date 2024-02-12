@@ -10,7 +10,6 @@ from tr_drive.util.conversion import Frame
 class Odom:
     def __init__(self, namespace):
         self.init_parameters(namespace)
-        self.init_topics()
         
         self.odom_received_hook = None
         
@@ -19,6 +18,8 @@ class Odom:
         self.biased_odom = None
         
         self.debugger: Debugger = Debugger(name = 'odometry_debugger')
+        
+        self.init_topics()
     
     def init_parameters(self, namespace):
         self.odom_topic = rospy.get_param(namespace + '/odom_topic')

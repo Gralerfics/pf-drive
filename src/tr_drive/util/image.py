@@ -11,12 +11,14 @@ class DigitalImage:
             self.data = None
         elif len(args) == 1 and isinstance(args[0], np.ndarray):
             # TODO: assert shape.
-            if len(args[0].shape) == 2:
+            if args[0].ndim == 2:
                 self.width, self.height, self.channel = args[0].shape[1], args[0].shape[0], 1
                 self.data = np.expand_dims(args[0], axis = 2)
-            else:
+            elif args[0].ndim == 3:
                 self.height, self.width, self.channel = args[0].shape
                 self.data = args[0]
+            else:
+                raise ValueError("Invalid array shape")
         elif len(args) == 1 and isinstance(args[0], Image):
             img = self.from_Image(args[0])
             self.width, self.height, self.channel = img.width, img.height, img.channel
@@ -98,25 +100,44 @@ class ImageProcessor:
         patch_radius = (patch_size - 1) // 2
         r, c = image.height, image.width
         
-        data_squeeze = np.squeeze(image.data, axis = 2)
-        data_pad = np.pad(np.float64(data_squeeze), patch_radius, 'constant', constant_values = np.nan)
+        data = np.squeeze(image.data, axis = 2)
+        data_pad = np.pad(np.float64(data), patch_radius, 'constant', constant_values = np.nan)
         
         kernels = np.lib.stride_tricks.as_strided(data_pad, (r, c, patch_size, patch_size), data_pad.strides + data_pad.strides).reshape(r, c, -1)
         kernel_mean = np.nanmean(kernels, axis = 2).reshape(r, c)
         kernel_std = np.nanstd(kernels, axis = 2).reshape(r, c)
         with np.errstate(divide = 'ignore', invalid = 'ignore'):
-            res = (data_squeeze - kernel_mean) / kernel_std
+            res = (data - kernel_mean) / kernel_std
         res[np.isnan(res)] = 0.0
         np.clip(res, -1.0, 1.0, out = res)
         
         return DigitalImage(np.uint8((res + 1.0) / 2 * 255))
     
     @staticmethod
-    def normalized_cross_correlation(image, image_ref, offset_list): # image_ref --offset_list[i]-> image ==> value[i]
-        assert image.channel == 1 and image_ref.channel == 1
+    def NCC(data: np.ndarray, data_ref: np.ndarray): # -> [-1, 1]
+        assert data.shape == data_ref.shape and data.ndim == 2
+        
+        mean = np.mean(data)
+        mean_ref = np.mean(data_ref)
+        std = np.std(data)
+        std_ref = np.std(data_ref)
+        
+        return np.sum((data - mean) * (data_ref - mean_ref)) / (data.shape[0] * data.shape[1] * std * std_ref)
+    
+    @staticmethod
+    def horizontal_NCC(image, image_ref, offset_list): # image_ref --offset_list[i]-> image ==> value[i]
+        assert image.channel == 1 and image_ref.channel == 1 and image.height == image_ref.height and image.width == image_ref.width
+        assert not (np.any(np.array(offset_list) <= -image.width) or np.any(np.array(offset_list) >= image.width))
+        
         r, c = image.height, image.width
-        r_ref, c_ref = image_ref.height, image_ref.width
-        assert r == r_ref and c == c_ref
         
+        data = np.squeeze(image.data, axis = 2)
+        data_ref = np.squeeze(image_ref.data, axis = 2)
+        data_shifted = [data[:, -min(0, offset) : c - max(0, offset)] for offset in offset_list]
+        data_ref_shifted = [data_ref[:, max(0, offset) : c + min(0, offset)] for offset in offset_list]
         
+        res = np.zeros(len(offset_list))
+        for i in range(len(offset_list)):
+            res[i] = ImageProcessor.NCC(data_shifted[i], data_ref_shifted[i])
+        return res.tolist()
 

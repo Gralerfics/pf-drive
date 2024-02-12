@@ -10,7 +10,6 @@ from tr_drive.util.image import DigitalImage, ImageProcessor
 class Camera:
     def __init__(self, namespace):
         self.init_parameters(namespace)
-        self.init_topics()
         
         self.image_received_hook = None
         
@@ -18,6 +17,8 @@ class Camera:
         self.processed_image: DigitalImage = None
         
         self.debugger: Debugger = Debugger(name = 'camera_debugger')
+        
+        self.init_topics()
     
     def init_parameters(self, namespace):
         self.raw_image_topic = rospy.get_param(namespace + '/raw_image_topic')
@@ -32,7 +33,8 @@ class Camera:
     def raw_image_cb(self, msg):
         self.last_image_msg = msg
         
-        self.processed_image = ImageProcessor.kernel_normalize(DigitalImage(msg).interpolate(*self.resize).grayscale(), self.patch_size)
+        self.processed_image = DigitalImage(msg).interpolate(*self.resize).grayscale()
+        self.processed_image = ImageProcessor.kernel_normalize(self.processed_image, self.patch_size)
         self.debugger.publish(self.processed_image_topic, self.processed_image.to_Image(encoding = 'mono8'))
         
         if self.image_received_hook is not None:
