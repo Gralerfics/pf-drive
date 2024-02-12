@@ -12,25 +12,33 @@ from tr_drive.util.image import DigitalImage, ImageProcessor
 # ready 表示回调已注册且已开始收到消息，ready 时方调用回调函数；
 # 使用 get_ 方法获取成员，避免线程冲突。
 class Camera:
-    def __init__(self, namespace):
+    def __init__(self,
+        raw_image_topic: str,
+        patch_size: list,
+        resize: list,
+        horizontal_fov: float,
+        processed_image_topic: str = '/tr/camera/processed_image'
+    ):
+        # private
         self.debugger: Debugger = Debugger(name = 'camera_debugger')
         self.image_received_hook = None
         self.last_image_msg: Image = None
         
+        # public
         self.raw_image: DigitalImage = None
         self.raw_image_lock = threading.Lock()
         self.processed_image: DigitalImage = None
         self.processed_image_lock = threading.Lock()
         
-        self.init_parameters(namespace)
+        # parameters
+        self.raw_image_topic = raw_image_topic
+        self.patch_size = patch_size
+        self.resize = resize
+        self.horizontal_fov = horizontal_fov
+        self.processed_image_topic = processed_image_topic
+        
+        # topics
         self.init_topics()
-    
-    def init_parameters(self, namespace):
-        self.raw_image_topic = rospy.get_param(namespace + '/raw_image_topic')
-        self.processed_image_topic = rospy.get_param(namespace + '/processed_image_topic')
-        self.patch_size = rospy.get_param(namespace + '/patch_size')
-        self.resize = rospy.get_param(namespace + '/resize')
-        self.horizontal_fov = rospy.get_param(namespace + '/horizontal_fov')
     
     def init_topics(self):
         self.sub_raw_image = rospy.Subscriber(self.raw_image_topic, Image, self.raw_image_cb, queue_size = 1)
@@ -38,12 +46,14 @@ class Camera:
     def raw_image_cb(self, msg):
         self.last_image_msg = msg
         
+        # raw_image
         self.raw_image_lock.acquire()
         try:
             self.raw_image = DigitalImage(msg)
         finally:
             self.raw_image_lock.release()
         
+        # processed_image
         self.processed_image_lock.acquire()
         try:
             self.processed_image = ImageProcessor.kernel_normalize(DigitalImage(msg).interpolate(*self.resize).grayscale(), self.patch_size)
@@ -51,6 +61,7 @@ class Camera:
         finally:
             self.processed_image_lock.release()
         
+        # hook
         if self.is_ready():
             self.image_received_hook(image = self.processed_image)
     

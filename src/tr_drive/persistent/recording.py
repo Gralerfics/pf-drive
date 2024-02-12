@@ -78,6 +78,8 @@ class Recording:
                 with open(odom_folder + '/' + filename, 'r') as f:
                     odom_dict = json.load(f)
                     recording.odoms.append(Frame.from_dict(odom_dict))
+        
+        return recording
     
     def to_path(self, path): # with name
         os.makedirs(path, exist_ok = False)

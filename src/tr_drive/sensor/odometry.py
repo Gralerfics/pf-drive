@@ -13,21 +13,26 @@ from tr_drive.util.conversion import Frame
 # 后面的应用类方法，默认前提是已经 ready；
 # 使用 get_ 方法获取成员，避免线程冲突。
 class Odom:
-    def __init__(self, namespace):
+    def __init__(self,
+        odom_topic: str,
+        processed_odom_topic: str = '/tr/odometry/processed'
+    ):
+        # private
         self.debugger: Debugger = Debugger(name = 'odometry_debugger')
         self.odom_received_hook = None
         self.last_odom_msg: Odometry = None
         self.bias: Odometry = Odometry()
         
+        # public
         self.biased_odom = None
         self.biased_odom_lock = threading.Lock()
         
-        self.init_parameters(namespace)
+        # parameters
+        self.odom_topic = odom_topic
+        self.processed_odom_topic = processed_odom_topic
+        
+        # topics
         self.init_topics()
-    
-    def init_parameters(self, namespace):
-        self.odom_topic = rospy.get_param(namespace + '/odom_topic')
-        self.processed_odom_topic = rospy.get_param(namespace + '/processed_odom_topic')
     
     def init_topics(self):
         self.sub_odom = rospy.Subscriber(self.odom_topic, Odometry, self.odom_cb)
@@ -35,12 +40,14 @@ class Odom:
     def odom_cb(self, msg: Odometry):
         self.last_odom_msg = msg
         
+        # biased_odom
         self.biased_odom_lock.acquire()
         try:
             self.biased_odom = Frame(self.bias).I * Frame(msg)
         finally:
             self.biased_odom_lock.release()
         
+        # hook
         if self.is_ready():
             self.odom_received_hook(odom = self.biased_odom)
     

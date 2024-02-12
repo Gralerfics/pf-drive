@@ -14,7 +14,7 @@ def spin_func():
     dpg.destroy_context()
 
 rospy.init_node('tr_teacher', anonymous = False)
-teacher = Teacher(namespace = '/tr')
+teacher = Teacher()
 spin_thread = threading.Thread(target = spin_func)
 spin_thread.start()
 
@@ -31,9 +31,9 @@ with dpg.texture_registry():
     )
 
 with dpg.window(tag = 'main'):
-    folder_input = dpg.add_input_text(label = 'folder', default_value = teacher.recording_folder)
-    name_input = dpg.add_input_text(label = 'name', default_value = teacher.recording_name)
-    auto_naming_checkbox = dpg.add_checkbox(label = 'auto naming', default_value = teacher.auto_naming)
+    folder_input = dpg.add_input_text(label = 'folder', default_value = teacher.params.persistent.recording_folder)
+    name_input = dpg.add_input_text(label = 'name', default_value = teacher.params.persistent.recording_name)
+    auto_naming_checkbox = dpg.add_checkbox(label = 'auto naming', default_value = teacher.params.persistent.auto_naming)
     
     start_button = dpg.add_button(label = 'start', width = 80, height = 30, callback = teacher.start_recording)
     stop_button = dpg.add_button(label = 'stop', width = 80, height = 30, callback = teacher.stop_recording)

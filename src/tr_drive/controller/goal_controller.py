@@ -7,14 +7,17 @@ from tr_drive.util.debug import Debugger
 
 
 class GoalController:
-    def __init__(self, namespace):
+    def __init__(self,
+        cmd_vel_topic: str
+    ):
+        # private
         self.debugger: Debugger = Debugger(name = 'goal_controller_debugger')
         
-        self.init_parameters(namespace)
+        # parameters
+        self.cmd_vel_topic = cmd_vel_topic
+        
+        # topics
         self.init_topics()
-    
-    def init_parameters(self, namespace):
-        self.cmd_vel_topic = rospy.get_param(namespace + '/cmd_vel_topic')
     
     def init_topics(self):
         self.pub_cmd_vel = rospy.Publisher(self.cmd_vel_topic, Twist, queue_size = 1)

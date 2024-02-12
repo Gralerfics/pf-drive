@@ -1,11 +1,11 @@
-# roslaunch tr_drive tb3_teach.launch folder:="/home/gralerfics/MyFiles/Workspace/tr_data" name:="a"
+# roslaunch tr_drive tb3_teach.launch folder:="/home/gralerfics/MyFiles/Workspace/tr_data"
 tr:
     camera:
         raw_image_topic: /tb3/camera/image
-        processed_image_topic: /tr/camera/processed_image # debug
         patch_size: 15
         resize: [100, 50] # [width, height]
         horizontal_fov: 114.59 # degree
+        processed_image_topic: /tr/camera/processed_image # debug
     odometry:
         odom_topic: /tb3/controller/odom
         processed_odom_topic: /tr/odometry/processed_odom # debug
