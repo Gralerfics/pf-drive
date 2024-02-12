@@ -26,9 +26,6 @@ class Repeater:
         self.params.camera.add('patch_size', self.recording.params['image']['patch_size'])
         self.params.camera.add('resize', self.recording.params['image']['resize'])
         self.params.camera.add('horizontal_fov', self.recording.params['image']['horizontal_fov'])
-        print(len(self.recording.raw_images))
-        print(len(self.recording.processed_images))
-        print(len(self.recording.odoms))
         
         # devices
         self.init_devices()
