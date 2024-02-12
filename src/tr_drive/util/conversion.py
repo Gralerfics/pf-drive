@@ -240,6 +240,10 @@ class Frame:
     @staticmethod
     def from_Odometry(msg: Odometry):
         return Frame.from_Pose(msg.pose.pose)
+
+    @staticmethod
+    def from_dict(d: dict):
+        return Frame(Vec3(d['translation']), Quat(d['quaternion']))
     
     def to_Pose(self):
         msg = Pose()
@@ -253,6 +257,12 @@ class Frame:
         msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z = self.translation.to_list()
         msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w = self.quaternion.to_list()
         return msg
+
+    def to_dict(self):
+        return {
+            'translation': self.translation.to_list(),
+            'quaternion': self.quaternion.to_list()
+        }
     
     def inverse(self):
         q_inv = self.quaternion.I
@@ -260,4 +270,15 @@ class Frame:
     
     def transform(self, other: 'Frame'):
         return Frame(self.translation + self.quaternion.rotate(other.translation), self.quaternion * other.quaternion)
+    
+    def yaw_difference(self, other: 'Frame'):
+        yaw_0 = self.quaternion.Euler[2]
+        yaw_1 = other.quaternion.Euler[2]
+        delta_yaw = abs(yaw_0 - yaw_1)
+        if delta_yaw > np.pi:
+            delta_yaw = np.pi * 2 - delta_yaw
+        return delta_yaw
+    
+    def translation_difference(self, other: 'Frame'):
+        return (other.I * self).translation.norm()
 

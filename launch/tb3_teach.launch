@@ -1,0 +1,15 @@
+<launch>
+    <arg name="folder" />
+    <arg name="name" default="." />
+    <arg name="teleop_keyboard" default="true" />
+
+	<param name="/tr/persistent/recording_folder" value="$(arg folder)" />
+	<param name="/tr/persistent/recording_name" value="$(arg name)" />
+	<rosparam file="$(find tr_drive)/config/tb3_teach.yaml" command="load" />
+
+	<node pkg="tr_drive" type="teacher_node.py" name="teacher" output="screen" />
+
+	<node name="teleop_keyboard" pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py" if="$(arg teleop_keyboard)">
+        <remap from="cmd_vel" to="/tb3/controller/cmd_vel" />
+    </node>
+</launch>

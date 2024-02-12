@@ -78,6 +78,29 @@ class DigitalImage:
             raise ValueError("Invalid conversion")
         msg.data = bytes(data)
         return msg
+
+    def to_imgui_texture(self):
+        data = self.data
+        if self.channel == 1:
+            data = np.concatenate([data, data, data, 255 * np.ones(data.shape)], axis = -1)
+        elif self.channel == 3:
+            data = np.concatenate([data, 255 * np.ones((*data.shape[:-1], 1))], axis = -1)
+        elif self.channel == 4:
+            pass
+        else:
+            raise ValueError("Unsupported channel")
+        return (data.reshape(-1).astype(float) / 255).tolist()
+    
+    def to_jpg(self, path):
+        if self.channel == 1:
+            cv2.imwrite(path, self.data)
+        elif self.channel == 3:
+            # cv2.imwrite(path, self.data)
+            pass # TODO
+        elif self.channel == 4:
+            cv2.imwrite(path, self.data[:, :, [2, 1, 0, 3]])
+        else:
+            raise ValueError("Unsupported channel")
     
     def grayscale(self):
         if self.channel == 1:

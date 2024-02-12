@@ -1,10 +1,8 @@
+# roslaunch tr_drive tb3_repeat.launch path:="/home/gralerfics/MyFiles/Workspace/tr_data/a"
 tr:
     camera:
         raw_image_topic: /tb3/camera/image
         processed_image_topic: /tr/camera/processed_image # debug
-        patch_size: 9
-        resize: [100, 50] # [width, height]
-        horizontal_fov: 114.59 # degree
     odometry:
         odom_topic: /tb3/controller/odom
         processed_odom_topic: /tr/odometry/processed_odom # debug

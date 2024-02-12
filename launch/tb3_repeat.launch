@@ -1,7 +1,7 @@
 <launch>
-    <arg name="recording" />
+    <arg name="path" />
 
-	<param name="/tr/persistent/recording_path" value="$(arg recording)" />
+	<param name="/tr/persistent/recording_path" value="$(arg path)" />
 	<rosparam file="$(find tr_drive)/config/tb3_repeat.yaml" command="load" />
 
 	<node pkg="tr_drive" type="repeater_node.py" name="repeater" output="screen" />
