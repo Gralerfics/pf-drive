@@ -73,8 +73,7 @@ class Recording:
         
         # load odometry
         odom_folder = path + recording.params['folders']['odom']
-        print(odom_folder)
-        for filename in os.listdir():
+        for filename in os.listdir(odom_folder):
             if filename.endswith('.json'):
                 with open(odom_folder + '/' + filename, 'r') as f:
                     odom_dict = json.load(f)
