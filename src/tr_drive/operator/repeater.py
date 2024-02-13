@@ -19,6 +19,8 @@ class Repeater:
         
         # public
         self.recording: Recording = None
+        self.repeating_launched = False
+        self.repeating_paused = False
         
         # parameters
         self.params = DictRegulator(rospy.get_param('/tr'))
@@ -26,9 +28,6 @@ class Repeater:
         self.params.camera.add('patch_size', self.recording.params['image']['patch_size'])
         self.params.camera.add('resize', self.recording.params['image']['resize'])
         self.params.camera.add('horizontal_fov', self.recording.params['image']['horizontal_fov'])
-        
-        for f in self.recording.odoms:
-            self.debugger.publish('/test', f.to_Odometry(frame_id = 'odom'))
         
         # devices
         self.init_devices()
@@ -58,9 +57,33 @@ class Repeater:
         )
         self.controller.wait_until_ready()
     
+    def start_repeating(self):
+        if self.repeating_launched:
+            return
+        self.odometry.zeroize()
+        pass # TODO
+        self.repeating_launched = True
+    
+    def resume_repeating(self):
+        if not self.repeating_launched or not self.repeating_paused:
+            return
+        pass # TODO
+        self.repeating_paused = False
+    
+    def pause_repeating(self):
+        if not self.repeating_launched or self.repeating_paused:
+            return
+        pass # TODO
+        self.repeating_paused = True
+    
+    def is_running(self):
+        return self.repeating_launched and (not self.repeating_paused)
+    
     def image_received(self, **args):
         if self.ready:
-            pass
+            if self.is_running():
+                pass
+            
             # if self.first_image is None:
             #     self.first_image = args['image']
             # current_image: DigitalImage = args['image']
@@ -78,7 +101,8 @@ class Repeater:
 
     def odom_received(self, **args):
         if self.ready:
-            pass
+            if self.is_running():
+                pass
 
 
 # TODO: idea: 金字塔匹配辅助确认距离; 互相关加权，倾向小角度; 角度校正跳变处理（例如跨度过大则找其他尖峰等）

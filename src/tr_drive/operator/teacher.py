@@ -68,8 +68,8 @@ class Teacher:
     
     def reset_recording(self):
         self.recording.clear()
-        self.recording_launched = False
         self.odometry.zeroize()
+        self.recording_launched = False
     
     def start_recording(self):
         if self.recording_launched:
