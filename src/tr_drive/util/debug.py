@@ -1,3 +1,5 @@
+import time
+
 import rospy
 
 
@@ -10,4 +12,5 @@ class Debugger:
         if topic not in self.publishers:
             self.publishers[topic] = rospy.Publisher(topic, type(msg), queue_size = 10) # TODO: queue_size.
         self.publishers[topic].publish(msg)
+        time.sleep(0.01) # TODO
 
