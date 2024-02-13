@@ -156,13 +156,14 @@ class Quat:
     
     def to_euler(self): # TODO: validate.
         # RPY; ZYX order
-        roll = np.arctan2(2 * (self.w * self.x + self.y * self.z), 1 - 2 * (self.x ** 2 + self.y ** 2))
-        pitch = np.arcsin(2 * (self.w * self.y - self.z * self.x))
-        yaw = np.arctan2(2 * (self.w * self.z + self.x * self.y), 1 - 2 * (self.y ** 2 + self.z ** 2))
+        x, y, z, w = self.normalize().to_list()
+        roll = np.arctan2(2 * (w * x + y * z), 1 - 2 * (x ** 2 + y ** 2))
+        pitch = np.arcsin(2 * (w * y - z * x))
+        yaw = np.arctan2(2 * (w * z + x * y), 1 - 2 * (y ** 2 + z ** 2))
         return np.array([roll, pitch, yaw])
     
     def to_rotation_matrix(self): # TODO: validate.
-        x, y, z, w = self.to_list()
+        x, y, z, w = self.normalize().to_list()
         return Mat3([
             [1 - 2 * (y ** 2 + z ** 2), 2 * (x * y - z * w), 2 * (x * z + y * w)],
             [2 * (x * y + z * w), 1 - 2 * (x ** 2 + z ** 2), 2 * (y * z - x * w)],
@@ -170,8 +171,9 @@ class Quat:
         ])
     
     def to_rotation_vector(self): # TODO: validate.
-        theta = 2 * np.arccos(self.w)
-        n = Vec3([self.x, self.y, self.z]).normalize()
+        x, y, z, w = self.normalize().to_list()
+        theta = 2 * np.arccos(w)
+        n = Vec3([x, y, z]).normalize()
         return n * theta
     
     def validate(self):
@@ -181,7 +183,8 @@ class Quat:
         return self.conjugate() / self.norm() ** 2
 
     def rotate(self, v: Vec3):
-        return Vec3((self * Quat(v.to_list() + [0]) * self.inverse()).to_list()[:3])
+        self_normalized = self.normalize()
+        return Vec3((self_normalized * Quat(v.to_list() + [0]) * self_normalized.inverse()).to_list()[:3])
     
     def conjugate(self):
         return Quat(-self.x, -self.y, -self.z, self.w)
