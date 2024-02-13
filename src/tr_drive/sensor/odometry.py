@@ -41,11 +41,8 @@ class Odom:
         self.last_odom_msg = msg
         
         # biased_odom
-        self.biased_odom_lock.acquire()
-        try:
+        with self.biased_odom_lock:
             self.biased_odom = Frame(self.bias).I * Frame(msg)
-        finally:
-            self.biased_odom_lock.release()
         
         # hook
         if self.is_ready():
@@ -75,9 +72,8 @@ class Odom:
     
     def get_biased_odom(self):
         if self.is_ready():
-            self.biased_odom_lock.acquire()
-            res = self.biased_odom
-            self.biased_odom_lock.release()
+            with self.biased_odom_lock:
+                res = self.biased_odom
             return res
         else:
             return False

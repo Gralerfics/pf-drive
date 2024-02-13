@@ -47,19 +47,13 @@ class Camera:
         self.last_image_msg = msg
         
         # raw_image
-        self.raw_image_lock.acquire()
-        try:
+        with self.raw_image_lock:
             self.raw_image = DigitalImage(msg)
-        finally:
-            self.raw_image_lock.release()
         
         # processed_image
-        self.processed_image_lock.acquire()
-        try:
+        with self.processed_image_lock:
             self.processed_image = ImageProcessor.kernel_normalize(DigitalImage(msg).interpolate(*self.resize).grayscale(), self.patch_size)
             # self.debugger.publish(self.processed_image_topic, self.processed_image.to_Image(encoding = 'mono8'))
-        finally:
-            self.processed_image_lock.release()
         
         # hook
         if self.is_ready():
@@ -89,18 +83,16 @@ class Camera:
     
     def get_raw_image(self):
         if self.is_ready():
-            self.raw_image_lock.acquire()
-            res = self.raw_image
-            self.raw_image_lock.release()
+            with self.raw_image_lock:
+                res = self.raw_image
             return res
         else:
             return False
     
     def get_processed_image(self):
         if self.is_ready():
-            self.processed_image_lock.acquire()
-            res = self.processed_image
-            self.processed_image_lock.release()
+            with self.processed_image_lock:
+                res = self.processed_image
             return res
         else:
             return False
