@@ -81,7 +81,7 @@ class Recording:
         
         return recording
     
-    def to_path(self, path): # with name
+    def to_path(self, path): # with name, TODO: overwrite check
         os.makedirs(path, exist_ok = False)
         
         # save parameters, TODO: exception for None values
