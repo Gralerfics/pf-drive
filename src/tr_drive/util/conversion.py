@@ -1,6 +1,6 @@
 import numpy as np
 
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, PoseStamped
 from nav_msgs.msg import Odometry
 
 
@@ -239,6 +239,10 @@ class Frame:
             # raise ValueError("Invalid quaternion")
             res.quaternion = Quat(0, 0, 0, 1)
         return res
+
+    @staticmethod
+    def from_PoseStamped(msg: PoseStamped):
+        return Frame.from_Pose(msg.pose)
     
     @staticmethod
     def from_Odometry(msg: Odometry):
@@ -254,9 +258,15 @@ class Frame:
         msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w = self.quaternion.to_list()
         return msg
     
-    def to_Odometry(self):
+    def to_PoseStamped(self, frame_id = ''):
+        msg = PoseStamped()
+        msg.header.frame_id = frame_id
+        msg.pose = self.to_Pose()
+        return msg
+    
+    def to_Odometry(self, frame_id = ''):
         msg = Odometry()
-        # TODO: header
+        msg.header.frame_id = frame_id # TODO
         msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z = self.translation.to_list()
         msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w = self.quaternion.to_list()
         return msg
