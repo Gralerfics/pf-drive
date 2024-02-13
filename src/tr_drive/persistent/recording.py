@@ -57,7 +57,7 @@ class Recording:
         if read_raw and recording.params['folders']['raw_image'] is not None:
             # TODO: exception
             raw_image_folder = path + recording.params['folders']['raw_image']
-            for filename in os.listdir(raw_image_folder):
+            for filename in sorted(os.listdir(raw_image_folder)):
                 if filename.endswith('.jpg'):
                     img_cv2 = cv2.imread(raw_image_folder + '/' + filename, cv2.IMREAD_GRAYSCALE)
                     img = DigitalImage(img_cv2)
@@ -65,7 +65,7 @@ class Recording:
         
         # load processed images
         processed_image_folder = path + recording.params['folders']['processed_image']
-        for filename in os.listdir(processed_image_folder):
+        for filename in sorted(os.listdir(processed_image_folder)):
             if filename.endswith('.jpg'):
                 img_cv2 = cv2.imread(processed_image_folder + '/' + filename, cv2.IMREAD_GRAYSCALE)
                 img = DigitalImage(img_cv2)
@@ -73,7 +73,7 @@ class Recording:
         
         # load odometry
         odom_folder = path + recording.params['folders']['odom']
-        for filename in os.listdir(odom_folder):
+        for filename in sorted(os.listdir(odom_folder)):
             if filename.endswith('.json'):
                 with open(odom_folder + '/' + filename, 'r') as f:
                     odom_dict = json.load(f)
