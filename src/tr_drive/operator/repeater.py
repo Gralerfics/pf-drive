@@ -27,6 +27,9 @@ class Repeater:
         self.params.camera.add('resize', self.recording.params['image']['resize'])
         self.params.camera.add('horizontal_fov', self.recording.params['image']['horizontal_fov'])
         
+        for f in self.recording.odoms:
+            self.debugger.publish('/test', f.to_Odometry(frame_id = 'odom'))
+        
         # devices
         self.init_devices()
         
@@ -78,4 +81,4 @@ class Repeater:
             pass
 
 
-# TODO: idea: 金字塔匹配辅助确认距离; 互相关加权，倾向小角度;
+# TODO: idea: 金字塔匹配辅助确认距离; 互相关加权，倾向小角度; 角度校正跳变处理（例如跨度过大则找其他尖峰等）
