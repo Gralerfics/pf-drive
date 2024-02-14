@@ -16,5 +16,5 @@ tr:
         velocity_max: 0.2
         omega_min: 0.15
         omega_max: 0.93 # TODO
-        translation_tolerance: 0.1
+        translation_tolerance: 0.05
         rotation_tolerance: 0.1

@@ -47,7 +47,7 @@ class Odom:
         self.init_topics()
     
     def init_topics(self):
-        self.sub_odom = rospy.Subscriber(self.odom_topic, Odometry, self.odom_cb)
+        self.sub_odom = rospy.Subscriber(self.odom_topic, Odometry, self.odom_cb, queue_size = 1) # TODO: queue_size
     
     def odom_cb(self, msg: Odometry):
         self.last_odom_msg = msg

@@ -34,8 +34,8 @@ with dpg.window(tag = 'main'):
     path_input = dpg.add_input_text(label = 'name', default_value = repeater.params.persistent.recording_path)
     
     start_button = dpg.add_button(label = 'start', width = 80, height = 30, callback = repeater.start_repeating)
-    resume_button = dpg.add_button(label = 'resume', width = 80, height = 30, callback = repeater.resume_repeating)
     pause_button = dpg.add_button(label = 'pause', width = 80, height = 30, callback = repeater.pause_repeating)
+    resume_button = dpg.add_button(label = 'resume', width = 80, height = 30, callback = repeater.resume_repeating)
     
     repeating_status_text = dpg.add_text('')
     
@@ -50,8 +50,8 @@ while dpg.is_dearpygui_running():
     dpg.configure_item(path_input, enabled = not repeater.repeating_launched)
     
     dpg.configure_item(start_button, enabled = not repeater.repeating_launched)
-    dpg.configure_item(resume_button, enabled = repeater.repeating_launched and repeater.repeating_paused)
     dpg.configure_item(pause_button, enabled = repeater.repeating_launched and (not repeater.repeating_paused))
+    dpg.configure_item(resume_button, enabled = repeater.repeating_launched and repeater.repeating_paused)
     
     dpg.set_value(repeating_status_text, 'Status: None.')
     

@@ -90,22 +90,28 @@ class Repeater:
             return
         
         self.odometry.zeroize()
-        pass # TODO
-        self.repeating_launched = True
-    
-    def resume_repeating(self):
-        if not self.is_ready() or not self.repeating_launched or not self.repeating_paused:
-            return
+        self.controller.activate()
+        
+        self.controller.set_goal(self.recording.odoms[50]) # to be deleted
         
         pass # TODO
-        self.repeating_paused = False
+        self.repeating_launched = True
     
     def pause_repeating(self):
         if not self.is_ready() or not self.repeating_launched or self.repeating_paused:
             return
         
+        self.controller.deactivate()
         pass # TODO
         self.repeating_paused = True
+    
+    def resume_repeating(self):
+        if not self.is_ready() or not self.repeating_launched or not self.repeating_paused:
+            return
+        
+        self.controller.activate()
+        pass # TODO
+        self.repeating_paused = False
     
     def is_running(self):
         return self.repeating_launched and (not self.repeating_paused)

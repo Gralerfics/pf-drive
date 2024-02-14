@@ -54,7 +54,7 @@ class Camera:
         self.init_topics()
     
     def init_topics(self):
-        self.sub_raw_image = rospy.Subscriber(self.raw_image_topic, Image, self.raw_image_cb, queue_size = 1)
+        self.sub_raw_image = rospy.Subscriber(self.raw_image_topic, Image, self.raw_image_cb, queue_size = 1) # TODO: queue_size
     
     def raw_image_cb(self, msg):
         self.last_image_msg = msg
