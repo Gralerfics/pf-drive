@@ -11,12 +11,19 @@ from tr_drive.sensor.camera import Camera
 from tr_drive.persistent.recording import Recording
 
 
-# ready 表示 __init__ 是否完成
+"""
+    示教.
+    
+    is_ready():
+        为 True 时方允许: 重置; 启动; 继续; 处理 image 和 odom 消息.
+        要求: recording 和 params 已初始化; devices 已初始化且 ready.
+"""
 class Teacher:
     def __init__(self):
         # private
         self.debugger: Debugger = Debugger(name = 'teacher_debugger')
-        self.ready = False
+        self.params_initialized = False
+        self.recording_initialized = False
         
         # public
         self.recording: Recording = None
@@ -25,16 +32,19 @@ class Teacher:
         # parameters
         self.params = DictRegulator(rospy.get_param('/tr'))
         self.params.persistent.add('auto_naming', self.params.persistent.recording_name.startswith('.'))
+        self.params_initialized = True
         
         # devices
         self.init_devices()
         
         # recording
         self.init_recording()
-        
-        self.ready = True
+        self.recording_initialized = True
     
     def init_devices(self):
+        self.camera = None
+        self.odometry = None
+        
         self.camera = Camera(
             raw_image_topic = self.params.camera.raw_image_topic,
             patch_size = self.params.camera.patch_size,
@@ -66,35 +76,53 @@ class Teacher:
             translation_threshold = self.params.teacher.translation_threshold
         )
     
+    def is_ready(self):
+        return \
+            self.params_initialized and \
+            self.recording_initialized and \
+            self.camera is not None and self.camera.is_ready() and \
+            self.odometry is not None and self.odometry.is_ready()
+    
     def reset_recording(self):
+        if not self.is_ready():
+            return False
+
         self.recording.clear()
         self.odometry.zeroize()
         self.recording_launched = False
+        return True
     
     def start_recording(self):
-        if self.recording_launched:
-            return # TODO
+        if not self.is_ready() or self.recording_launched:
+            return False
+        
         self.reset_recording()
         self.recording_launched = True
     
     def stop_recording(self):
-        if not self.recording_launched:
-            return
+        if not self.is_ready() or not self.recording_launched:
+            return False
+        
         path = self.params.persistent.recording_folder + '/' + (self.params.persistent.recording_name if not self.params.persistent.auto_naming else time.strftime('%Y-%m-%d_%H:%M:%S'))
         self.recording.to_path(path)
         self.recording_launched = False
+        return True
     
     def image_received(self, **args):
-        if self.ready:
-            if self.recording_launched:
-                pass
+        if not self.is_ready() or not self.recording_launched:
+            return False
+
+        pass
+        return True
     
     def odom_received(self, **args):
-        if self.ready:
-            if self.recording_launched:
-                current_odom = self.odometry.get_biased_odom()
-                if len(self.recording.odoms) == 0 or self.recording.odoms[-1].yaw_difference(current_odom) >= self.params.teacher.rotation_threshold or self.recording.odoms[-1].translation_difference(current_odom) >= self.params.teacher.translation_threshold:
-                    self.recording.raw_images.append(self.camera.get_raw_image())
-                    self.recording.processed_images.append(self.camera.get_processed_image())
-                    self.recording.odoms.append(self.odometry.biased_odom)
+        if not self.is_ready() or not self.recording_launched:
+            return False
+        
+        current_odom = self.odometry.get_biased_odom()
+        if len(self.recording.odoms) == 0 or self.recording.odoms[-1].yaw_difference(current_odom) >= self.params.teacher.rotation_threshold or self.recording.odoms[-1].translation_difference(current_odom) >= self.params.teacher.translation_threshold:
+            self.recording.raw_images.append(self.camera.get_raw_image())
+            self.recording.processed_images.append(self.camera.get_processed_image())
+            self.recording.odoms.append(self.odometry.biased_odom)
+        return True
 

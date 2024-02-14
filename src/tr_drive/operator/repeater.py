@@ -88,6 +88,7 @@ class Repeater:
     def start_repeating(self):
         if not self.is_ready() or self.repeating_launched:
             return
+        
         self.odometry.zeroize()
         pass # TODO
         self.repeating_launched = True
@@ -95,12 +96,14 @@ class Repeater:
     def resume_repeating(self):
         if not self.is_ready() or not self.repeating_launched or not self.repeating_paused:
             return
+        
         pass # TODO
         self.repeating_paused = False
     
     def pause_repeating(self):
         if not self.is_ready() or not self.repeating_launched or self.repeating_paused:
             return
+        
         pass # TODO
         self.repeating_paused = True
     
