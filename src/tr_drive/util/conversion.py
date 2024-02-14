@@ -39,6 +39,9 @@ class Vec3:
     
     def __str__(self):
         return f'Vector3[{self.x}, {self.y}, {self.z}]'
+
+    def copy(self):
+        return Vec3(self.x, self.y, self.z)
     
     def to_list(self):
         return [self.x, self.y, self.z]
@@ -81,6 +84,9 @@ class Mat3:
     
     def __str__(self):
         return f'Matrix3{self.to_list()}'
+
+    def copy(self):
+        return Mat3(self.data.copy())
     
     def to_list(self):
         return self.data.flatten().tolist()
@@ -115,6 +121,9 @@ class Quat:
     
     def __str__(self):
         return f'Quaternion[x = {self.x}, y = {self.y}, z = {self.z}, w = {self.w}]'
+    
+    def copy(self):
+        return Quat(self.x, self.y, self.z, self.w)
     
     @property
     def I(self):
@@ -217,6 +226,9 @@ class Frame:
     
     def __str__(self):
         return f'Frame[t = {self.translation}, q = {self.quaternion}]'
+    
+    def copy(self):
+        return Frame(self.translation.copy(), self.quaternion.copy())
     
     @property
     def t(self):
