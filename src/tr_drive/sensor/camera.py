@@ -8,9 +8,22 @@ from tr_drive.util.debug import Debugger
 from tr_drive.util.image import DigitalImage, ImageProcessor
 
 
-# 接收摄像头图像信息，对其进行处理（grayscale & patch normalization），调用注册的回调函数；
-# ready 表示回调已注册且已开始收到消息，ready 时方调用回调函数；
-# 使用 get_ 方法获取成员，避免线程冲突。
+"""
+    用于接收摄像头图像信息, 对其进行处理 (grayscale & patch normalization), 调用注册的回调函数.
+    
+    register_x_hook():
+        注册新的回调函数到列表.
+    
+    is_ready():
+        为 True 时方允许: 获取 raw_image 和 processed_image; 重置; 置零; 执行回调函数.
+        要求: 已开始收到消息.
+    
+    modify_x_topic():
+        动态修改 topic.
+    
+    get_x():
+        线程安全地获取成员.
+"""
 class Camera:
     def __init__(self,
         raw_image_topic: str,
@@ -21,7 +34,7 @@ class Camera:
     ):
         # private
         self.debugger: Debugger = Debugger(name = 'camera_debugger')
-        self.image_received_hook = None
+        self.image_received_hooks: list = []
         self.last_image_msg: Image = None
         
         # public
@@ -57,13 +70,14 @@ class Camera:
         
         # hook
         if self.is_ready():
-            self.image_received_hook(image = self.processed_image)
+            for hook in self.image_received_hooks:
+                hook(image = self.processed_image)
     
     def register_image_received_hook(self, hook):
-        self.image_received_hook = hook
+        self.image_received_hooks.append(hook)
     
     def is_ready(self):
-        return (self.last_image_msg is not None) and (self.image_received_hook is not None)
+        return self.last_image_msg is not None
     
     def wait_until_ready(self):
         while not rospy.is_shutdown() and not self.is_ready():
@@ -72,28 +86,28 @@ class Camera:
         rospy.loginfo('Camera is ready.')
     
     def modify_raw_image_topic(self, topic): # 修改订阅的话题（参数服务器参数仅作为初始默认值，修改参数不通过参数服务器）
-        if self.is_ready():
-            self.last_image_msg = None
-            self.raw_image_topic = topic
-            self.sub_raw_image.unregister()
-            self.sub_raw_image = rospy.Subscriber(self.raw_image_topic, Image, self.raw_image_cb, queue_size = 1)
-            return True
-        else:
+        if not self.is_ready():
             return False
+        
+        self.last_image_msg = None
+        self.raw_image_topic = topic
+        self.sub_raw_image.unregister()
+        self.sub_raw_image = rospy.Subscriber(self.raw_image_topic, Image, self.raw_image_cb, queue_size = 1)
+        return True
     
     def get_raw_image(self):
-        if self.is_ready():
-            with self.raw_image_lock:
-                res = self.raw_image
-            return res
-        else:
+        if not self.is_ready():
             return False
+        
+        with self.raw_image_lock:
+            res = self.raw_image
+        return res
     
     def get_processed_image(self):
-        if self.is_ready():
-            with self.processed_image_lock:
-                res = self.processed_image
-            return res
-        else:
+        if not self.is_ready():
             return False
+        
+        with self.processed_image_lock:
+            res = self.processed_image
+        return res
 
