@@ -19,12 +19,15 @@ from tr_drive.sensor.odometry import Odom
     set_odometry():
         注册 odometry.
     
+    register_x_hook():
+        注册新的回调函数到列表.
+    
     is_ready():
         为 True 时方允许: 获取和设置 goal; ...
         要求: odometry 已注册且已 ready.
     
     (de)activate():
-        暂停和恢复, odom_received 执行的前提.
+        若未 activate 则发布零速.
     
     get_x(), set_x():
         线程安全地获取成员.
@@ -45,6 +48,7 @@ class GoalController:
     ):
         # private
         self.debugger: Debugger = Debugger(name = 'goal_controller_debugger')
+        self.goal_reached_hooks: list = []
         
         # public
         self.goal: Frame = None
@@ -76,6 +80,9 @@ class GoalController:
     def set_odometry(self, odometry: Odom):
         self.odometry = odometry
         self.odometry.register_odom_received_hook(self.odom_received)
+    
+    def register_goal_reached_hook(self, hook):
+        self.goal_reached_hooks.append(hook)
     
     def is_ready(self):
         return self.odometry is not None and self.odometry.is_ready()
@@ -125,7 +132,6 @@ class GoalController:
         if not self.is_ready() or not self.activated:
             return False
         
-        self.command_stop() # TODO
         self.activated = False
         return True
     
@@ -137,9 +143,6 @@ class GoalController:
         alpha = self.warp_to_pi(math.atan2(dy, dx) - theta)
         beta = self.warp_to_pi(-theta - alpha + goal_theta)
         return rho, alpha, beta
-
-    def command_stop(self):
-        self.pub_cmd_vel.publish(Twist())
     
     def scale_velocities(self, _v, _omega):
         v = np.clip(_v, math.copysign(self.velocity_min, _v), math.copysign(self.velocity_max, _v))
@@ -157,36 +160,38 @@ class GoalController:
         return v, omega
     
     def odom_received(self, **args):
-        if not self.is_ready() or not self.activated or self.get_goal() is None:
-            return False
+        if not self.is_ready() or self.get_goal() is None:
+            return
         
-        goal: Frame = self.get_goal().copy()
-        odom: Frame = self.odometry.get_biased_odom() # args['odom']
-        
-        self.debugger.publish('/current', goal.to_Odometry(frame_id = 'odom'))
-        
-        goal_theta = goal.q.Euler[2]
-        odom_theta = odom.q.Euler[2]
-        delta_t = goal.t - odom.t
-        rho, alpha, beta = self.calculate(delta_t.x, delta_t.y, odom_theta, goal_theta)
-        
-        if rho < self.translation_tolerance or alpha > math.pi / 2 and alpha < -math.pi / 2:
-            v = 0
-            omega = self.k_theta * self.warp_to_pi(goal_theta - odom_theta)
+        if self.activated:
+            goal: Frame = self.get_goal().copy()
+            odom: Frame = self.odometry.get_biased_odom() # args['odom']
+            
+            goal_theta = goal.q.Euler[2]
+            odom_theta = odom.q.Euler[2]
+            delta_t = goal.t - odom.t
+            rho, alpha, beta = self.calculate(delta_t.x, delta_t.y, odom_theta, goal_theta)
+            
+            if rho < self.translation_tolerance or alpha > math.pi / 2 and alpha < -math.pi / 2:
+                v = 0
+                omega = self.k_theta * self.warp_to_pi(goal_theta - odom_theta)
+            else:
+                v = self.k_rho * rho
+                omega = self.k_alpha * alpha + self.k_beta * beta
+            
+            v, omega = self.scale_velocities(v, omega)
+            
+            if rho < self.translation_tolerance and abs(self.warp_to_pi(goal_theta - odom_theta)) < self.rotation_tolerance:
+                self.set_goal(None)
+                for hook in self.goal_reached_hooks:
+                    hook()
+                v = 0
+                omega = 0
+            
+            cmd = Twist()
+            cmd.linear.x = v
+            cmd.angular.z = omega
+            self.pub_cmd_vel.publish(cmd)
         else:
-            v = self.k_rho * rho
-            omega = self.k_alpha * alpha + self.k_beta * beta
-        
-        v, omega = self.scale_velocities(v, omega)
-        
-        if rho < self.translation_tolerance and abs(self.warp_to_pi(goal_theta - odom_theta)) < self.rotation_tolerance:
-            self.set_goal(None)
-            v = 0
-            omega = 0
-        
-        cmd = Twist()
-        cmd.linear.x = v
-        cmd.angular.z = omega
-        self.pub_cmd_vel.publish(cmd)
-        return True
+            self.pub_cmd_vel.publish(Twist())
 

@@ -110,19 +110,17 @@ class Teacher:
     
     def image_received(self, **args):
         if not self.is_ready() or not self.recording_launched:
-            return False
+            return
 
         pass
-        return True
     
     def odom_received(self, **args):
         if not self.is_ready() or not self.recording_launched:
-            return False
+            return
         
         current_odom = self.odometry.get_biased_odom()
         if len(self.recording.odoms) == 0 or self.recording.odoms[-1].yaw_difference(current_odom) >= self.params.teacher.rotation_threshold or self.recording.odoms[-1].translation_difference(current_odom) >= self.params.teacher.translation_threshold:
             self.recording.raw_images.append(self.camera.get_raw_image())
             self.recording.processed_images.append(self.camera.get_processed_image())
             self.recording.odoms.append(self.odometry.biased_odom)
-        return True
 

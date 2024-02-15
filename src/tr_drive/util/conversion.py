@@ -264,6 +264,14 @@ class Frame:
     def from_dict(d: dict):
         return Frame(Vec3(d['translation']), Quat(d['quaternion']))
     
+    @staticmethod
+    def from_translation(t: Vec3):
+        return Frame(t, Quat())
+    
+    @staticmethod
+    def from_z_rotation(theta: float):
+        return Frame(Vec3(), Quat([0, 0, np.sin(theta / 2), np.cos(theta / 2)]))
+    
     def to_Pose(self):
         msg = Pose()
         msg.position.x, msg.position.y, msg.position.z = self.translation.to_list()

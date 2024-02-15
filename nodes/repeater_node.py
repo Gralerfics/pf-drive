@@ -29,9 +29,15 @@ with dpg.texture_registry():
         default_value = repeater.camera.get_processed_image().to_imgui_texture(),
         tag = '__processed_image_texture'
     )
+    dpg.add_dynamic_texture(
+        width = repeater.camera.resize[0],
+        height = repeater.camera.resize[1],
+        default_value = repeater.camera.get_processed_image().to_imgui_texture(),
+        tag = '__next_goal_image_texture'
+    )
 
 with dpg.window(tag = 'main'):
-    path_input = dpg.add_input_text(label = 'name', default_value = repeater.params.persistent.recording_path)
+    path_input = dpg.add_input_text(label = 'path', default_value = repeater.params.persistent.recording_path)
     
     start_button = dpg.add_button(label = 'start', width = 80, height = 30, callback = repeater.start_repeating)
     pause_button = dpg.add_button(label = 'pause', width = 80, height = 30, callback = repeater.pause_repeating)
@@ -40,6 +46,7 @@ with dpg.window(tag = 'main'):
     repeating_status_text = dpg.add_text('')
     
     processed_image = dpg.add_image('__processed_image_texture')
+    next_goal_image = dpg.add_image('__next_goal_image_texture')
 
 dpg.set_primary_window('main', True)
 dpg.show_viewport()
@@ -53,9 +60,10 @@ while dpg.is_dearpygui_running():
     dpg.configure_item(pause_button, enabled = repeater.repeating_launched and (not repeater.repeating_paused))
     dpg.configure_item(resume_button, enabled = repeater.repeating_launched and repeater.repeating_paused)
     
-    dpg.set_value(repeating_status_text, 'Status: None.')
+    dpg.set_value(repeating_status_text, f'Status: goal {repeater.passed_goal_index} passed.')
     
     dpg.set_value('__processed_image_texture', repeater.camera.get_processed_image().to_imgui_texture())
+    dpg.set_value('__next_goal_image_texture', repeater.recording.processed_images[min(repeater.passed_goal_index + 1, len(repeater.recording.processed_images) - 1)].to_imgui_texture())
     
     dpg.render_dearpygui_frame()
 

@@ -163,4 +163,11 @@ class ImageProcessor:
         for i in range(len(offset_list)):
             res[i] = ImageProcessor.NCC(data_shifted[i], data_ref_shifted[i])
         return res.tolist()
+    
+    @staticmethod
+    def best_match_offset(image, image_ref, range_radius): # r + 1 + r
+        offset_list = list(range(-range_radius, range_radius + 1))
+        values = ImageProcessor.horizontal_NCC(image, image_ref, offset_list)
+        idx = np.argmax(values)
+        return offset_list[idx], values[idx]
 
