@@ -23,6 +23,9 @@ class DigitalImage:
             img = self.from_Image(args[0])
             self.width, self.height, self.channel = img.width, img.height, img.channel
             self.data = img.data
+        elif len(args) == 3 and isinstance(args[0], int) and isinstance(args[1], int) and isinstance(args[2], int):
+            self.width, self.height, self.channel = args
+            self.data = np.zeros((self.height, self.width, self.channel), dtype = np.uint8)
         else:
             raise ValueError("Invalid arguments")
     
