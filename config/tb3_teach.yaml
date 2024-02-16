@@ -3,7 +3,7 @@ tr:
     camera:
         raw_image_topic: /tb3/camera/image
         patch_size: 15
-        resize: [100, 50] # [width, height]
+        resize: [150, 50] # [width, height]
         horizontal_fov: 114.59 # degree
         processed_image_topic: /tr/camera/processed_image # debug
     odometry:

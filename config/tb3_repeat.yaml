@@ -19,7 +19,7 @@ tr:
         translation_tolerance: 0.05
         rotation_tolerance: 0.1
     repeater:
-        match_offset_radius: 75 # px
+        match_offset_radius: 90 # px
         along_path_radius: 2
         k_rotation: 0.01
         k_along_path: 0.02

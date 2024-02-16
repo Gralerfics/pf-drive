@@ -1,3 +1,4 @@
+import time
 import threading
 
 import rospy
@@ -42,21 +43,11 @@ class Repeater:
         # parameters
         self.params = DictRegulator(rospy.get_param('/tr'))
         
-        self.recording = Recording.from_path(self.params.persistent.recording_path)
-        self.goal_distances.append(0.0)
-        for idx in range(len(self.recording.odoms) - 1):
-            d = (self.recording.odoms[idx + 1].t - self.recording.odoms[idx].t).norm()
-            self.goal_intervals.append(d)
-            self.goal_distances.append(self.goal_distances[-1] + d)
-        self.goal_intervals.append(0.0)
-        
-        self.params.camera.add('patch_size', self.recording.params['image']['patch_size'])
-        self.params.camera.add('resize', self.recording.params['image']['resize'])
-        self.params.camera.add('horizontal_fov', self.recording.params['image']['horizontal_fov'])
-        self.recording_and_params_initialized = True
-        
         # devices
         self.init_devices()
+        
+        # load recording
+        self.load_recording()
     
     def init_devices(self):
         self.camera = None
@@ -97,13 +88,41 @@ class Repeater:
         self.controller.register_goal_reached_hook(self.goal_reached)
         self.controller.wait_until_ready()
     
+    def load_recording(self):
+        self.recording_and_params_initialized = False
+        
+        self.recording = Recording.from_path(self.params.persistent.recording_path)
+        
+        self.goal_distances.append(0.0)
+        for idx in range(len(self.recording.odoms) - 1):
+            d = (self.recording.odoms[idx + 1].t - self.recording.odoms[idx].t).norm()
+            self.goal_intervals.append(d)
+            self.goal_distances.append(self.goal_distances[-1] + d)
+        self.goal_intervals.append(0.0)
+        
+        self.params.camera.add('patch_size', self.recording.params['image']['patch_size'])
+        self.params.camera.add('resize', self.recording.params['image']['resize'])
+        self.params.camera.add('horizontal_fov', self.recording.params['image']['horizontal_fov'])
+        
+        self.camera.modify_patch_size(self.recording.params['image']['patch_size'])
+        self.camera.modify_resize(self.recording.params['image']['resize'])
+        self.camera.modify_horizontal_fov(self.recording.params['image']['horizontal_fov'])
+        
+        self.recording_and_params_initialized = True
+    
     def is_ready(self):
         return \
             self.recording_and_params_initialized and \
             self.camera is not None and self.camera.is_ready() and \
             self.odometry is not None and self.odometry.is_ready() and \
             self.controller is not None and self.controller.is_ready()
-    
+
+    def wait_until_ready(self):
+        while not rospy.is_shutdown() and not self.is_ready():
+            rospy.loginfo('Waiting for repeater ...')
+            time.sleep(0.2)
+        rospy.loginfo('Repeater is ready.')
+
     def inc_passed_goal_index(self):
         with self.passed_goal_index_lock:
             self.passed_goal_index += 1
