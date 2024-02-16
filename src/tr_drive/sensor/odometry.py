@@ -74,10 +74,6 @@ class Odom:
         rospy.loginfo('Odometry is ready.')
     
     def modify_odom_topic(self, topic):
-        if not self.is_ready():
-            return False
-
-        self.last_odom_msg = None
         self.odom_topic = topic
         self.sub_odom.unregister()
         self.sub_odom = rospy.Subscriber(self.odom_topic, Odometry, self.odom_cb)
@@ -92,16 +88,10 @@ class Odom:
         return res
     
     def reset(self): # 重置零偏
-        if not self.is_ready():
-            return False
-
         self.bias = Odometry()
         return True
     
     def zeroize(self): # 当前点设为零点
-        if not self.is_ready():
-            return False
-
         self.bias = self.last_odom_msg
         return True
 

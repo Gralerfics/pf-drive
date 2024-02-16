@@ -91,8 +91,10 @@ class Repeater:
     def load_recording(self):
         self.recording_and_params_initialized = False
         
+        # load recording
         self.recording = Recording.from_path(self.params.persistent.recording_path)
         
+        # initialize goal intervals and distances
         self.goal_distances.append(0.0)
         for idx in range(len(self.recording.odoms) - 1):
             d = (self.recording.odoms[idx + 1].t - self.recording.odoms[idx].t).norm()
@@ -100,10 +102,10 @@ class Repeater:
             self.goal_distances.append(self.goal_distances[-1] + d)
         self.goal_intervals.append(0.0)
         
+        # modify camera parameters
         self.params.camera.add('patch_size', self.recording.params['image']['patch_size'])
         self.params.camera.add('resize', self.recording.params['image']['resize'])
         self.params.camera.add('horizontal_fov', self.recording.params['image']['horizontal_fov'])
-        
         self.camera.modify_patch_size(self.recording.params['image']['patch_size'])
         self.camera.modify_resize(self.recording.params['image']['resize'])
         self.camera.modify_horizontal_fov(self.recording.params['image']['horizontal_fov'])

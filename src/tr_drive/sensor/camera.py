@@ -86,36 +86,20 @@ class Camera:
         rospy.loginfo('Camera is ready.')
     
     def modify_raw_image_topic(self, topic): # 修改订阅的话题（参数服务器参数仅作为初始默认值，修改参数不通过参数服务器）
-        if not self.is_ready():
-            return False
-        
-        self.last_image_msg = None
         self.raw_image_topic = topic
         self.sub_raw_image.unregister()
         self.sub_raw_image = rospy.Subscriber(self.raw_image_topic, Image, self.raw_image_cb, queue_size = 1)
         return True
     
     def modify_patch_size(self, patch_size: list):
-        if not self.is_ready():
-            return False
-        
-        self.last_image_msg = None
         with self.processed_image_lock:
             self.patch_size = patch_size
     
     def modify_resize(self, resize: list):
-        if not self.is_ready():
-            return False
-        
-        self.last_image_msg = None
         with self.processed_image_lock:
             self.resize = resize
     
     def modify_horizontal_fov(self, horizontal_fov: float):
-        if not self.is_ready():
-            return False
-        
-        self.last_image_msg = None
         self.horizontal_fov = horizontal_fov
     
     def get_raw_image(self):
