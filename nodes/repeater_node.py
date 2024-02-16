@@ -60,10 +60,10 @@ while dpg.is_dearpygui_running():
     dpg.configure_item(pause_button, enabled = repeater.repeating_launched and (not repeater.repeating_paused))
     dpg.configure_item(resume_button, enabled = repeater.repeating_launched and repeater.repeating_paused)
     
-    dpg.set_value(repeating_status_text, f'Status: goal {repeater.passed_goal_index} passed.')
+    dpg.set_value(repeating_status_text, f'Status: goal {repeater.get_passed_goal_index()} passed.')
     
     dpg.set_value('__processed_image_texture', repeater.camera.get_processed_image().to_imgui_texture())
-    dpg.set_value('__next_goal_image_texture', repeater.recording.processed_images[min(repeater.passed_goal_index + 1, len(repeater.recording.processed_images) - 1)].to_imgui_texture())
+    dpg.set_value('__next_goal_image_texture', repeater.recording.processed_images[min(repeater.get_passed_goal_index() + 1, len(repeater.recording.processed_images) - 1)].to_imgui_texture())
     
     dpg.render_dearpygui_frame()
 
