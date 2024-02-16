@@ -83,6 +83,12 @@ class Teacher:
             self.camera is not None and self.camera.is_ready() and \
             self.odometry is not None and self.odometry.is_ready()
     
+    def wait_until_ready(self):
+        while not rospy.is_shutdown() and not self.is_ready():
+            rospy.loginfo('Waiting for teacher ...')
+            time.sleep(0.2)
+        rospy.loginfo('Teacher is ready.')
+    
     def reset_recording(self):
         if not self.is_ready():
             return False

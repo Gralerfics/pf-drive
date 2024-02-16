@@ -236,7 +236,7 @@ class Repeater:
         goal = T_0c * goal_offset
         
         ADVANCE_DISTANCE = 0.12
-        goal = goal * Frame.from_translation(Vec3(ADVANCE_DISTANCE, 0, 0)) # TODO
+        goal = goal * Frame.from_translation(Vec3(ADVANCE_DISTANCE, 0, 0)) # TODO: turning goal with no advance distance
         
         ANGLE_THRESHOLD = 0.1
         delta = T_0c.I * goal

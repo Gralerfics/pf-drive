@@ -18,6 +18,8 @@ teacher = Teacher()
 spin_thread = threading.Thread(target = spin_func)
 spin_thread.start()
 
+teacher.wait_until_ready()
+
 dpg.create_context()
 dpg.create_viewport(title = 'teacher', width = 600, height = 400)
 dpg.setup_dearpygui()
@@ -56,9 +58,10 @@ while dpg.is_dearpygui_running():
     dpg.configure_item(start_button, enabled = not teacher.recording_launched)
     dpg.configure_item(stop_button, enabled = teacher.recording_launched)
     
-    dpg.set_value(recording_status_text, f'Status: {f"{len(teacher.recording.odoms)} goals recorded." if teacher.recording_launched else "Stopped."}')
+    dpg.set_value(recording_status_text, f'Status: {f"{len(teacher.recording.odoms)} goals recorded." if teacher.recording_launched else "stopped."}')
     
-    dpg.set_value('__processed_image_texture', teacher.camera.get_processed_image().to_imgui_texture())
+    if teacher.camera.is_ready():
+        dpg.set_value('__processed_image_texture', teacher.camera.get_processed_image().to_imgui_texture())
     
     dpg.render_dearpygui_frame()
 

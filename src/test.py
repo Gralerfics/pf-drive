@@ -1,53 +1,53 @@
-class DictRegulator:
-    def __init__(self, d):
-        for key, value in d.items():
-            if isinstance(value, dict):
-                setattr(self, key, DictRegulator(value))
-            else:
-                setattr(self, key, value)
+# class DictRegulator:
+#     def __init__(self, d):
+#         for key, value in d.items():
+#             if isinstance(value, dict):
+#                 setattr(self, key, DictRegulator(value))
+#             else:
+#                 setattr(self, key, value)
     
-    def add(self, key, value):
-        setattr(self, key, value)
+#     def add(self, key, value):
+#         setattr(self, key, value)
     
-    def remove(self, key):
-        delattr(self, key)
+#     def remove(self, key):
+#         delattr(self, key)
     
-    def to_dict(self):
-        result = {}
-        for key, value in self.__dict__.items():
-            if isinstance(value, DictRegulator):
-                result[key] = value.to_dict()
-            else:
-                result[key] = value
-        return result
+#     def to_dict(self):
+#         result = {}
+#         for key, value in self.__dict__.items():
+#             if isinstance(value, DictRegulator):
+#                 result[key] = value.to_dict()
+#             else:
+#                 result[key] = value
+#         return result
 
 
-d = {'bc': 123, 'd': {'a': 43, 'f': 25}}
-obj = DictRegulator(d)
-print(obj.to_dict())
+# d = {'bc': 123, 'd': {'a': 43, 'f': 25}}
+# obj = DictRegulator(d)
+# print(obj.to_dict())
 
 
-# import dearpygui.dearpygui as dpg
-# import dearpygui.demo as demo
+import dearpygui.dearpygui as dpg
+import dearpygui.demo as demo
 
-# def save_callback():
-#     print("Save Clicked")
+def save_callback():
+    print("Save Clicked")
 
-# dpg.create_context()
-# dpg.create_viewport()
+dpg.create_context()
+dpg.create_viewport()
 
-# demo.show_demo()
+demo.show_demo()
 
-# with dpg.window(label="Example Window"):
-#     dpg.add_text("Hello world")
-#     dpg.add_button(label="Save", callback=save_callback)
-#     dpg.add_input_text(label="string")
-#     dpg.add_slider_float(label="float")
+with dpg.window(label="Example Window"):
+    dpg.add_text("Hello world")
+    dpg.add_button(label="Save", callback=save_callback)
+    dpg.add_input_text(label="string")
+    dpg.add_slider_float(label="float")
 
-# dpg.setup_dearpygui()
-# dpg.show_viewport()
-# dpg.start_dearpygui()
-# dpg.destroy_context()
+dpg.setup_dearpygui()
+dpg.show_viewport()
+dpg.start_dearpygui()
+dpg.destroy_context()
 
 
 # import numpy as np
