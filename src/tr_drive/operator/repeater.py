@@ -104,6 +104,19 @@ class Repeater:
             self.odometry is not None and self.odometry.is_ready() and \
             self.controller is not None and self.controller.is_ready()
     
+    def inc_passed_goal_index(self):
+        with self.passed_goal_index_lock:
+            self.passed_goal_index += 1
+    
+    def get_passed_goal_index(self):
+        with self.passed_goal_index_lock:
+            res = self.passed_goal_index
+        return res
+    
+    def set_passed_goal_index(self, idx: int):
+        with self.passed_goal_index_lock:
+            self.passed_goal_index = idx
+
     def start_repeating(self):
         if not self.is_ready() or self.repeating_launched:
             return False
@@ -134,19 +147,6 @@ class Repeater:
     
     def is_running(self):
         return self.repeating_launched and (not self.repeating_paused)
-    
-    def inc_passed_goal_index(self):
-        with self.passed_goal_index_lock:
-            self.passed_goal_index += 1
-    
-    def get_passed_goal_index(self):
-        with self.passed_goal_index_lock:
-            res = self.passed_goal_index
-        return res
-    
-    def set_passed_goal_index(self, idx: int):
-        with self.passed_goal_index_lock:
-            self.passed_goal_index = idx
     
     def batched_match(self, image, indices):
         offsets = np.zeros(len(indices))
@@ -207,8 +207,9 @@ class Repeater:
         delta_theta = (1 - u) * theta_a + u * theta_b
         rotation_correction = self.params.repeater.k_rotation * delta_theta
         
-        # goal
         # print(along_path_correction, rotation_correction)
+        
+        # goal
         goal_offset = Frame.from_z_rotation(rotation_correction) * T_cb
         goal_offset.translation *= along_path_correction
         goal = T_0c * goal_offset
@@ -235,11 +236,15 @@ class Repeater:
 
 
 """ TODO ideas
-金字塔匹配辅助确认距离;
-互相关加权, 倾向小角度;
-角度校正跳变处理 (例如跨度过大则找其他尖峰等);
-controller 限速和 goal 间距的关系 (低限速则拐大弯, 插值更平滑, 可能可适用于更大 goal 间距);
-多种计算 0~u~1 的方式融合
+结构：
+    用 Decorator 重构，把 ready 的判断写成注解。
+
+算法：
+    金字塔匹配辅助确认距离;
+    互相关加权, 倾向小角度;
+    角度校正跳变处理 (例如跨度过大则找其他尖峰等);
+    controller 限速和 goal 间距的关系 (低限速则拐大弯, 插值更平滑, 可能可适用于更大 goal 间距);
+    多种计算 0~u~1 的方式融合
 """
 
 # if self.first_image is None:
