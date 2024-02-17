@@ -40,8 +40,11 @@ class Repeater:
         self.goal_intervals: list[float] = [] # the intervals between goal i and goal i + 1
         self.goal_distances: list[float] = [] # the distances between goal 0 and goal i
         
-        # parameters
+        # parameters (with default camera parameters, will be modified when loading recording)
         self.params = DictRegulator(rospy.get_param('/tr'))
+        self.params.camera.add('patch_size', 15)
+        self.params.camera.add('resize', [150, 50])
+        self.params.camera.add('horizontal_fov', 114.59)
         
         # devices
         self.init_devices()
@@ -228,14 +231,14 @@ class Repeater:
         delta_theta = (1 - u) * theta_a + u * theta_b
         rotation_correction = self.params.repeater.k_rotation * delta_theta
         
-        # print(along_path_correction, rotation_correction)
+        print(f'rotation_correction: {rotation_correction}; along_path_correction: {along_path_correction}')
         
         # goal
         goal_offset = Frame.from_z_rotation(rotation_correction) * T_cb
         goal_offset.translation *= along_path_correction
         goal = T_0c * goal_offset
         
-        ADVANCE_DISTANCE = 0.12
+        ADVANCE_DISTANCE = 0.2
         goal = goal * Frame.from_translation(Vec3(ADVANCE_DISTANCE, 0, 0)) # TODO: turning goal with no advance distance
         
         ANGLE_THRESHOLD = 0.1
