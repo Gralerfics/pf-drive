@@ -113,6 +113,8 @@ class Repeater:
         self.camera.modify_resize(self.recording.params['image']['resize'])
         self.camera.modify_horizontal_fov(self.recording.params['image']['horizontal_fov'])
         
+        self.debugger.publish('recorded_odoms', Frame.to_path(self.recording.odoms, frame_id = 'odom'))
+        
         self.recording_and_params_initialized = True
     
     def is_ready(self):

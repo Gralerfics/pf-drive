@@ -1,7 +1,7 @@
 import numpy as np
 
 from geometry_msgs.msg import Pose, PoseStamped
-from nav_msgs.msg import Odometry
+from nav_msgs.msg import Odometry, Path
 
 
 class Vec3:
@@ -271,6 +271,13 @@ class Frame:
     @staticmethod
     def from_z_rotation(theta: float):
         return Frame(Vec3(), Quat([0, 0, np.sin(theta / 2), np.cos(theta / 2)]))
+    
+    @staticmethod
+    def to_path(frames: list, frame_id = ''):
+        msg = Path()
+        msg.header.frame_id = frame_id
+        msg.poses = [frame.to_PoseStamped(frame_id) for frame in frames]
+        return msg
     
     def to_Pose(self):
         msg = Pose()
