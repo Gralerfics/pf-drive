@@ -42,7 +42,7 @@ roslaunch teach_repeat tb3_gmapping.launch
 启动 Repeater：
 
 ```
-roslaunch teach_repeat dm_tb3.launch load_path:="..."
+roslaunch teach_repeat dm_tb3.launch path:="..."
 ```
 
 ---
