@@ -24,25 +24,25 @@ Teach and repeat driving controller.
 启动仿真环境（Turtlebot 3）：
 
 ```
-roslaunch teach_repeat tb3_wbt.launch [rviz:=false]
+roslaunch tr_drive tb3_wbt.launch [rviz:=false]
 ```
 
 启动 Teacher：
 
 ```
-roslaunch teach_repeat dc_tb3.launch [teleop_keyboard:=false]
+roslaunch tr_drive dc_tb3.launch [teleop_keyboard:=false]
 ```
 
 启动 GMapping（可选）：
 
 ```
-roslaunch teach_repeat tb3_gmapping.launch
+roslaunch tr_drive tb3_gmapping.launch
 ```
 
 启动 Repeater：
 
 ```
-roslaunch teach_repeat dm_tb3.launch path:="..."
+roslaunch tr_drive dm_tb3.launch path:="..."
 ```
 
 ---
