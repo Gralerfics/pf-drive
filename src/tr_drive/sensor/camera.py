@@ -15,7 +15,7 @@ from tr_drive.util.image import DigitalImage, ImageProcessor
         注册新的回调函数到列表.
     
     is_ready():
-        为 True 时方允许: 获取 raw_image 和 processed_image; 重置; 置零; 执行回调函数.
+        为 True 时方允许: 获取 raw_image 和 processed_image; 执行回调函数.
         要求: 已开始收到消息.
     
     modify_x_topic():
