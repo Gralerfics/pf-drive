@@ -131,7 +131,7 @@ class Teacher:
             return
         
         odom = self.odometry.get_biased_odom()
-        if len(self.recording.odoms) == 0 or self.difference_under_threshold(self.recording.odoms[-1], odom):
+        if len(self.recording.odoms) == 0 or not self.difference_under_threshold(self.recording.odoms[-1], odom):
             if self.params.teacher.save_raw_images:
                 self.recording.raw_images.append(self.camera.get_raw_image())
                 

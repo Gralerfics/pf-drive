@@ -12,6 +12,7 @@ from tr_drive.util.conversion import Frame
 """
     用于接收里程计信息, 对其进行处理 (零偏), 调用注册的回调函数.
     顺便记录可选的 ground_truth_odom (不进行处理, 重要的是相对位置), 暂写死在内部, 视情况改为从外部设置话题并注册处理 (转换) 函数.
+        TODO: 应该把 gt 分离出去作为一个单独的 device 并实现不同来源的处理.
     
     register_x_hook():
         注册新的回调函数到列表.
