@@ -56,10 +56,10 @@ class Teacher:
         self.camera.register_image_received_hook(self.image_received)
         self.camera.wait_until_ready()
         
-        
         self.odometry = Odom(
             odom_topic = self.params.odometry.odom_topic,
-            processed_odom_topic = self.params.odometry.processed_odom_topic
+            processed_odom_topic = self.params.odometry.processed_odom_topic,
+            ground_truth_odom_topic = self.params.odometry.ground_truth_odom_topic if 'ground_truth_odom_topic' in self.params.odometry else None
         )
         self.odometry.register_odom_received_hook(self.odom_received)
         self.odometry.wait_until_ready()

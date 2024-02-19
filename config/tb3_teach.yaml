@@ -9,6 +9,7 @@ tr:
     odometry:
         odom_topic: /tb3/controller/odom
         processed_odom_topic: /tr/odometry/processed_odom # debug
+        # ground_truth_odom_topic: /amcl_pose
     teacher:
         save_raw_images: true
         save_ground_truth_odoms: true

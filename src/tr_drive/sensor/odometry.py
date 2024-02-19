@@ -129,7 +129,7 @@ class Odom:
         return True
     
     def get_ground_truth_odom(self):
-        if not self.is_ready() or self.ground_truth_odom_topic is None:
+        if not self.is_ready() or self.ground_truth_odom_topic is None or self.last_ground_truth_odom_msg is None:
             return False
         
         with self.ground_truth_odom_lock:
