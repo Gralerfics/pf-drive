@@ -10,5 +10,7 @@ tr:
         odom_topic: /tb3/controller/odom
         processed_odom_topic: /tr/odometry/processed_odom # debug
     teacher:
+        save_raw_images: true
+        save_ground_truth_odoms: true
         rotation_threshold: 0.08 # rad
         translation_threshold: 0.04 # m

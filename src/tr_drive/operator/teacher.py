@@ -4,6 +4,7 @@ import rospy
 
 from tr_drive.util.debug import Debugger
 from tr_drive.util.namespace import DictRegulator
+from tr_drive.util.conversion import Frame
 
 from tr_drive.sensor.odometry import Odom
 from tr_drive.sensor.camera import Camera
@@ -55,6 +56,7 @@ class Teacher:
         self.camera.register_image_received_hook(self.image_received)
         self.camera.wait_until_ready()
         
+        
         self.odometry = Odom(
             odom_topic = self.params.odometry.odom_topic,
             processed_odom_topic = self.params.odometry.processed_odom_topic
@@ -64,7 +66,6 @@ class Teacher:
     
     def init_recording(self):
         self.recording = Recording()
-        self.recording.set_raw_image_folder('/raw_image') # TODO
         self.recording.set_image_parameters(
             raw_size = [self.camera.get_raw_image().width, self.camera.get_raw_image().height],
             patch_size = self.camera.patch_size,
@@ -120,13 +121,26 @@ class Teacher:
 
         pass
     
+    def difference_under_threshold(self, frame_1: Frame, frame_2: Frame):
+        return \
+            frame_1.yaw_difference(frame_2) < self.params.teacher.rotation_threshold and \
+            frame_1.translation_difference(frame_2) < self.params.teacher.translation_threshold
+    
     def odom_received(self, **args):
         if not self.is_ready() or not self.recording_launched:
             return
         
-        current_odom = self.odometry.get_biased_odom()
-        if len(self.recording.odoms) == 0 or self.recording.odoms[-1].yaw_difference(current_odom) >= self.params.teacher.rotation_threshold or self.recording.odoms[-1].translation_difference(current_odom) >= self.params.teacher.translation_threshold:
-            self.recording.raw_images.append(self.camera.get_raw_image())
+        odom = self.odometry.get_biased_odom()
+        if len(self.recording.odoms) == 0 or self.difference_under_threshold(self.recording.odoms[-1], odom):
+            if self.params.teacher.save_raw_images:
+                self.recording.raw_images.append(self.camera.get_raw_image())
+                
             self.recording.processed_images.append(self.camera.get_processed_image())
-            self.recording.odoms.append(self.odometry.biased_odom)
+            
+            self.recording.odoms.append(odom)
+            
+            if self.params.teacher.save_ground_truth_odoms:
+                ground_truth = self.odometry.get_ground_truth_odom()
+                if ground_truth:
+                    self.recording.ground_truths.append(ground_truth)
 

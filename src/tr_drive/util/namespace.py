@@ -12,6 +12,9 @@ class DictRegulator:
     def remove(self, key):
         delattr(self, key)
     
+    def __contains__(self, key):
+        return hasattr(self, key)
+    
     def to_dict(self):
         res = {}
         for key, value in self.__dict__.items():
