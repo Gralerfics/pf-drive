@@ -30,7 +30,7 @@ roslaunch tr_drive tb3_wbt.launch [rviz:=false]
 启动 Teacher：
 
 ```
-roslaunch tr_drive tb3_teach.launch folder:="/home/gralerfics/MyFiles/Workspace/tr_data" [name:='.'] [teleop_keyboard:=false]
+roslaunch tr_drive tb3_teach.launch folder:="..." [name:='.'] [teleop_keyboard:=false]
 ```
 
 启动 GMapping（可选）：
