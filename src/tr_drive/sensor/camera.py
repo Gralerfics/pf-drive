@@ -15,11 +15,8 @@ from tr_drive.util.image import DigitalImage, ImageProcessor
         注册新的回调函数到列表.
     
     is_ready():
-        为 True 时方允许: 获取 raw_image 和 processed_image; 执行回调函数.
-        要求: 已开始收到消息.
-    
-    modify_x_topic():
-        动态修改 topic.
+        为 True 时应保证可以: 获取 raw_image 和 processed_image; 执行回调函数.
+        要求: raw_image 和 processed_image 皆不为 None.
     
     get_x():
         线程安全地获取成员.
@@ -35,13 +32,11 @@ class Camera:
         # private
         self.debugger: Debugger = Debugger(name = 'camera_debugger')
         self.image_received_hooks: list = []
-        self.last_image_msg: Image = None
         
         # public
+        self.image_lock = threading.Lock()
         self.raw_image: DigitalImage = None
-        self.raw_image_lock = threading.Lock()
         self.processed_image: DigitalImage = None
-        self.processed_image_lock = threading.Lock()
         
         # parameters
         self.raw_image_topic = raw_image_topic
@@ -51,33 +46,28 @@ class Camera:
         self.processed_image_topic = processed_image_topic
         
         # topics
-        self.init_topics()
-    
-    def init_topics(self):
         self.sub_raw_image = rospy.Subscriber(self.raw_image_topic, Image, self.raw_image_cb, queue_size = 1) # TODO: queue_size
     
-    def raw_image_cb(self, msg):
-        self.last_image_msg = msg
-        
-        # raw_image
-        with self.raw_image_lock:
+    def __del__(self):
+        self.sub_raw_image.unregister()
+    
+    def raw_image_cb(self, msg): # 订阅话题, 转为 DigitalImage 以及处理后存储; 若 ready 则执行回调函数.
+        with self.image_lock:
             self.raw_image = DigitalImage(msg)
-        
-        # processed_image
-        with self.processed_image_lock:
             self.processed_image = ImageProcessor.kernel_normalize(DigitalImage(msg).interpolate(*self.resize).grayscale(), self.patch_size)
             # self.debugger.publish(self.processed_image_topic, self.processed_image.to_Image(encoding = 'mono8'))
         
-        # hook
-        if self.is_ready():
+        if self.is_ready(): # 保证自身 ready 后再执行回调函数.
             for hook in self.image_received_hooks:
-                hook(image = self.processed_image)
+                hook()
+                # hook(processed_image = self.processed_image)
     
     def register_image_received_hook(self, hook):
         self.image_received_hooks.append(hook)
     
     def is_ready(self):
-        return self.last_image_msg is not None
+        with self.image_lock:
+            return self.raw_image is not None and self.processed_image is not None
     
     def wait_until_ready(self):
         while not rospy.is_shutdown() and not self.is_ready():
@@ -85,36 +75,17 @@ class Camera:
             time.sleep(0.2)
         rospy.loginfo('Camera is ready.')
     
-    def modify_raw_image_topic(self, topic): # 修改订阅的话题（参数服务器参数仅作为初始默认值，修改参数不通过参数服务器）
-        self.raw_image_topic = topic
-        self.sub_raw_image.unregister()
-        self.sub_raw_image = rospy.Subscriber(self.raw_image_topic, Image, self.raw_image_cb, queue_size = 1)
-        return True
-    
-    def modify_patch_size(self, patch_size: list):
-        with self.processed_image_lock:
-            self.patch_size = patch_size
-    
-    def modify_resize(self, resize: list):
-        with self.processed_image_lock:
-            self.resize = resize
-    
-    def modify_horizontal_fov(self, horizontal_fov: float):
-        self.horizontal_fov = horizontal_fov
+    def set_params(self, **kwargs):
+        with self.image_lock:
+            self.patch_size = kwargs['patch_size'] if 'patch_size' in kwargs.keys() else self.patch_size
+            self.resize = kwargs['resize'] if 'resize' in kwargs.keys() else self.resize
+            self.horizontal_fov = kwargs['horizontal_fov'] if 'horizontal_fov' in kwargs.keys() else self.horizontal_fov
     
     def get_raw_image(self):
-        if not self.is_ready():
-            return False
-        
-        with self.raw_image_lock:
-            res = self.raw_image
-        return res
+        with self.image_lock:
+            return self.raw_image
     
     def get_processed_image(self):
-        if not self.is_ready():
-            return False
-        
-        with self.processed_image_lock:
-            res = self.processed_image
-        return res
+        with self.image_lock:
+            return self.processed_image
 

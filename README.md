@@ -82,7 +82,7 @@ patch normalization 处理，后者订阅里程计 Odometry 数据，转为 Fram
 
 ### 线程安全
 
-对外 public、可能在回调函数中或同时在多处被引用的成员都应定义对偶的 `..._lock = threading.Lock()` 加锁，并提供 `get_/set_` 等安全的操作方法。
+对外 public、可能在回调函数中或同时在多处被引用的成员都应定义对应的 `..._lock = threading.Lock()` 加锁，并提供 `get_/set_` 等安全的操作方法。
 
 ### 参数服务器
 

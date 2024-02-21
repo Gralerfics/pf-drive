@@ -4,10 +4,11 @@ import rospy
 
 from tr_drive.util.debug import Debugger
 from tr_drive.util.namespace import DictRegulator
-from tr_drive.util.conversion import Frame
+from tr_drive.util.conversion import Frame, type_from_str
 
 from tr_drive.sensor.odometry import Odom
 from tr_drive.sensor.camera import Camera
+from tr_drive.sensor.global_locator import GlobalLocator
 
 from tr_drive.persistent.recording import Recording
 
@@ -17,7 +18,7 @@ from tr_drive.persistent.recording import Recording
     
     is_ready():
         为 True 时方允许: 重置; 启动; 继续; 处理 image 和 odom 消息.
-        要求: recording 和 params 已初始化; devices 已初始化且 ready.
+        要求: recording 和 params 已初始化; devices 对象存在, 不为 None 且 ready.
 """
 class Teacher:
     def __init__(self):
@@ -33,6 +34,7 @@ class Teacher:
         # parameters
         self.params = DictRegulator(rospy.get_param('/tr'))
         self.params.persistent.add('auto_naming', self.params.persistent.recording_name.startswith('.'))
+        self.global_locator_used = 'global_locator' in self.params # 是否引入全局定位信息.
         self.params_initialized = True
         
         # devices
@@ -43,9 +45,6 @@ class Teacher:
         self.recording_initialized = True
     
     def init_devices(self):
-        self.camera = None
-        self.odometry = None
-        
         self.camera = Camera(
             raw_image_topic = self.params.camera.raw_image_topic,
             patch_size = self.params.camera.patch_size,
@@ -53,16 +52,32 @@ class Teacher:
             horizontal_fov = self.params.camera.horizontal_fov,
             processed_image_topic = self.params.camera.processed_image_topic
         )
-        self.camera.register_image_received_hook(self.image_received)
+        # self.camera.register_image_received_hook(self.image_received)
         self.camera.wait_until_ready()
         
         self.odometry = Odom(
             odom_topic = self.params.odometry.odom_topic,
-            processed_odom_topic = self.params.odometry.processed_odom_topic,
-            ground_truth_odom_topic = self.params.odometry.ground_truth_odom_topic if 'ground_truth_odom_topic' in self.params.odometry else None
+            processed_odom_topic = self.params.odometry.processed_odom_topic
         )
         self.odometry.register_odom_received_hook(self.odom_received)
         self.odometry.wait_until_ready()
+        
+        if self.global_locator_used:
+            global_locator_type = self.params.global_locator.type
+            if global_locator_type == 'tf':
+                self.global_locator = GlobalLocator(
+                    locator_type = global_locator_type,
+                    fixed_frame = self.params.global_locator.fixed_frame,
+                    odometry = self.odometry
+                )
+            else: # global_locator_type == 'topic'
+                self.global_locator = GlobalLocator(
+                    locator_type = global_locator_type,
+                    topic = self.params.global_locator.topic,
+                    topic_type = type_from_str(self.params.global_locator.topic_type)
+                )
+            # self.global_locator.register_global_frame_received_hook(self.global_frame_received)
+            self.global_locator.wait_until_ready()
     
     def init_recording(self):
         self.recording = Recording()
@@ -81,8 +96,9 @@ class Teacher:
         return \
             self.params_initialized and \
             self.recording_initialized and \
-            self.camera is not None and self.camera.is_ready() and \
-            self.odometry is not None and self.odometry.is_ready()
+            hasattr(self, 'camera') and self.camera is not None and self.camera.is_ready() and \
+            hasattr(self, 'odometry') and self.odometry is not None and self.odometry.is_ready() and \
+            not self.global_locator_used or (hasattr(self, 'global_locator') and self.global_locator is not None and self.global_locator.is_ready())
     
     def wait_until_ready(self):
         while not rospy.is_shutdown() and not self.is_ready():
@@ -115,12 +131,6 @@ class Teacher:
         self.recording_launched = False
         return True
     
-    def image_received(self, **args):
-        if not self.is_ready() or not self.recording_launched:
-            return
-
-        pass
-    
     def difference_under_threshold(self, frame_1: Frame, frame_2: Frame):
         return \
             frame_1.yaw_difference(frame_2) < self.params.teacher.rotation_threshold and \
@@ -140,7 +150,8 @@ class Teacher:
             self.recording.odoms.append(odom)
             
             if self.params.teacher.save_ground_truth_odoms:
-                ground_truth = self.odometry.get_ground_truth_odom()
-                if ground_truth:
-                    self.recording.ground_truths.append(ground_truth)
+                if self.global_locator_used:
+                    global_frame = self.global_locator.get_global_frame()
+                    if global_frame:
+                        self.recording.ground_truths.append(global_frame)
 

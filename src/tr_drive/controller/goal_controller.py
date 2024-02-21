@@ -14,7 +14,9 @@ from tr_drive.sensor.odometry import Odom
 
 
 """
-    goal 导向的控制器, 可暂停和恢复, 调用注册的回调函数 (e.g. arrived?).
+    TODO: 按 Odom 中注明的规范进行修改.
+    
+    goal 导向的控制器, 可暂停和恢复, 调用注册的回调函数.
     
     set_odometry():
         注册 odometry.
