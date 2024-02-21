@@ -6,6 +6,7 @@ import rospy
 
 from tr_drive.util.conversion import Frame
 from tr_drive.util.image import DigitalImage, ImageProcessor
+from tr_drive.util.namespace import recursive_dict_update
 
 
 # recording_name/
@@ -51,7 +52,8 @@ class Recording:
     def from_path(path): # with name, TODO: index check; exists check
         recording = Recording()
         with open(path + '/parameters.json', 'r') as f:
-            recording.params = json.load(f)
+            loaded_params = json.load(f)
+        recording.params = recursive_dict_update(recording.params, loaded_params)
         valid = True
         
         # load processed images

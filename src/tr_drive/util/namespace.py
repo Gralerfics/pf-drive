@@ -24,3 +24,12 @@ class DictRegulator:
                 res[key] = value
         return res
 
+
+def recursive_dict_update(d: dict, u: dict):
+    for k, v in u.items():
+        if isinstance(v, dict):
+            d[k] = recursive_dict_update(d.get(k, {}), v)
+        else:
+            d[k] = v
+    return d
+
