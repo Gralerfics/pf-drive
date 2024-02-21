@@ -1,6 +1,6 @@
 import numpy as np
 
-from geometry_msgs.msg import Pose, PoseStamped
+from geometry_msgs.msg import Pose, PoseStamped, PoseWithCovariance, PoseWithCovarianceStamped
 from nav_msgs.msg import Odometry, Path
 
 
@@ -210,14 +210,23 @@ class Frame:
         if len(args) == 0:
             self.translation = Vec3()
             self.quaternion = Quat()
-        elif len(args) == 1 and isinstance(args[0], Pose):
-            frame = Frame.from_Pose(args[0])
-            self.translation, self.quaternion = frame.translation, frame.quaternion
-        elif len(args) == 1 and isinstance(args[0], Odometry):
-            frame = Frame.from_Odometry(args[0])
+        elif len(args) == 1:
+            if isinstance(args[0], Pose):
+                frame = Frame.from_Pose(args[0])
+            elif isinstance(args[0], PoseStamped):
+                frame = Frame.from_Pose(args[0].pose)
+            elif isinstance(args[0], PoseWithCovariance):
+                frame = Frame.from_Pose(args[0].pose)
+            elif isinstance(args[0], PoseWithCovarianceStamped):
+                frame = Frame.from_Pose(args[0].pose.pose)
+            elif isinstance(args[0], Odometry):
+                frame = Frame.from_Odometry(args[0])
             self.translation, self.quaternion = frame.translation, frame.quaternion
         elif len(args) == 2: # and isinstance(args[0], Vec3) and isinstance(args[1], Quat):
             self.translation, self.quaternion = args
+        elif len(args) == 7: # and all(isinstance(arg, (float, int)) for arg in args):
+            self.translation = Vec3(args[:3])
+            self.quaternion = Quat(args[3:])
         else:
             raise ValueError("Invalid arguments")
     
@@ -251,10 +260,6 @@ class Frame:
             # raise ValueError("Invalid quaternion")
             res.quaternion = Quat(0, 0, 0, 1)
         return res
-
-    @staticmethod
-    def from_PoseStamped(msg: PoseStamped):
-        return Frame.from_Pose(msg.pose)
     
     @staticmethod
     def from_Odometry(msg: Odometry):
@@ -293,7 +298,7 @@ class Frame:
     
     def to_Odometry(self, frame_id = ''):
         msg = Odometry()
-        msg.header.frame_id = frame_id # TODO
+        msg.header.frame_id = frame_id
         msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z = self.translation.to_list()
         msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w = self.quaternion.to_list()
         return msg
@@ -321,4 +326,21 @@ class Frame:
     
     def translation_difference(self, other: 'Frame'):
         return (other.I * self).translation.norm()
+
+
+def type_from_str(type: str):
+    if type == 'Pose':
+        return Pose
+    elif type == 'PoseStamped':
+        return PoseStamped
+    elif type == 'PoseWithCovariance':
+        return PoseWithCovariance
+    elif type == 'PoseWithCovarianceStamped':
+        return PoseWithCovarianceStamped
+    elif type == 'Odometry':
+        return Odometry
+    elif type == 'Path':
+        return Path
+    else:
+        raise ValueError('Unsupported type string')
 
