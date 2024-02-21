@@ -7,12 +7,13 @@ import numpy as np
 
 from tr_drive.util.debug import Debugger
 from tr_drive.util.namespace import DictRegulator
-from tr_drive.util.conversion import Vec3, Frame
+from tr_drive.util.conversion import Vec3, Frame, type_from_str
 from tr_drive.util.image import ImageProcessor
 
 from tr_drive.sensor.odometry import Odom
 from tr_drive.sensor.camera import Camera
 from tr_drive.controller.goal_controller import GoalController
+from tr_drive.sensor.global_locator import GlobalLocator
 
 from tr_drive.persistent.recording import Recording
 
@@ -42,6 +43,7 @@ class Repeater:
         
         # parameters (with default camera parameters, will be modified when loading recording)
         self.params = DictRegulator(rospy.get_param('/tr'))
+        self.global_locator_used = 'global_locator' in self.params # 是否引入全局定位信息.
         self.params.camera.add('patch_size', 15)
         self.params.camera.add('resize', [150, 50])
         self.params.camera.add('horizontal_fov', 114.59)
@@ -53,10 +55,6 @@ class Repeater:
         self.load_recording()
     
     def init_devices(self):
-        self.camera = None
-        self.odometry = None
-        self.controller = None
-        
         self.camera = Camera(
             raw_image_topic = self.params.camera.raw_image_topic,
             patch_size = self.params.camera.patch_size,
@@ -64,13 +62,13 @@ class Repeater:
             horizontal_fov = self.params.camera.horizontal_fov,
             processed_image_topic = self.params.camera.processed_image_topic
         )
+        self.camera.register_image_received_hook(self.image_received)
         self.camera.wait_until_ready()
         
         self.odometry = Odom(
             odom_topic = self.params.odometry.odom_topic,
             processed_odom_topic = self.params.odometry.processed_odom_topic
         )
-        self.camera.register_image_received_hook(self.image_received)
         self.odometry.register_odom_received_hook(self.odom_received)
         self.odometry.wait_until_ready()
         
@@ -90,6 +88,23 @@ class Repeater:
         self.controller.set_odometry(self.odometry)
         self.controller.register_goal_reached_hook(self.goal_reached)
         self.controller.wait_until_ready()
+        
+        if self.global_locator_used:
+            global_locator_type = self.params.global_locator.type
+            if global_locator_type == 'tf':
+                self.global_locator = GlobalLocator(
+                    locator_type = global_locator_type,
+                    fixed_frame = self.params.global_locator.fixed_frame,
+                    odometry = self.odometry
+                )
+            else: # global_locator_type == 'topic'
+                self.global_locator = GlobalLocator(
+                    locator_type = global_locator_type,
+                    topic = self.params.global_locator.topic,
+                    topic_type = type_from_str(self.params.global_locator.topic_type)
+                )
+            # self.global_locator.register_global_frame_received_hook(self.global_frame_received)
+            self.global_locator.wait_until_ready()
     
     def load_recording(self):
         self.recording_and_params_initialized = False
@@ -106,24 +121,27 @@ class Repeater:
         self.goal_intervals.append(0.0)
         
         # modify camera parameters
-        self.params.camera.add('patch_size', self.recording.params['image']['patch_size'])
-        self.params.camera.add('resize', self.recording.params['image']['resize'])
-        self.params.camera.add('horizontal_fov', self.recording.params['image']['horizontal_fov'])
-        self.camera.modify_patch_size(self.recording.params['image']['patch_size'])
-        self.camera.modify_resize(self.recording.params['image']['resize'])
-        self.camera.modify_horizontal_fov(self.recording.params['image']['horizontal_fov'])
+        self.params.camera.patch_size = self.recording.params['image']['patch_size']
+        self.params.camera.resize = self.recording.params['image']['resize']
+        self.params.camera.horizontal_fov = self.recording.params['image']['horizontal_fov']
+        self.camera.set_params(**self.params.camera.to_dict())
         
-        self.debugger.publish('recorded_odoms', Frame.to_path(self.recording.odoms, frame_id = 'odom'))
+        # TODO: debug, publish recording
+        self.debugger.publish('/recorded_odoms', Frame.to_path(self.recording.odoms, frame_id = 'odom'))
+        if self.global_locator_used:
+            frame_id = self.params.global_locator.fixed_frame if 'fixed_frame' in self.params.global_locator else 'map'
+            self.debugger.publish('/recorded_gts', Frame.to_path(self.recording.ground_truths, frame_id = frame_id))
         
         self.recording_and_params_initialized = True
     
     def is_ready(self):
         return \
             self.recording_and_params_initialized and \
-            self.camera is not None and self.camera.is_ready() and \
-            self.odometry is not None and self.odometry.is_ready() and \
-            self.controller is not None and self.controller.is_ready()
-
+            hasattr(self, 'camera') and self.camera is not None and self.camera.is_ready() and \
+            hasattr(self, 'odometry') and self.odometry is not None and self.odometry.is_ready() and \
+            hasattr(self, 'controller') and self.controller is not None and self.controller.is_ready() and \
+            not self.global_locator_used or (hasattr(self, 'global_locator') and self.global_locator is not None and self.global_locator.is_ready())
+    
     def wait_until_ready(self):
         while not rospy.is_shutdown() and not self.is_ready():
             rospy.loginfo('Waiting for repeater ...')
