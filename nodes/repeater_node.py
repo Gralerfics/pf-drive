@@ -58,15 +58,15 @@ dpg.show_viewport()
 
 while dpg.is_dearpygui_running():
     repeater.params.persistent.recording_path = dpg.get_value(path_input)
-    dpg.configure_item(path_input, enabled = not repeater.repeating_launched)
-    dpg.configure_item(load_button, enabled = not repeater.repeating_launched)
+    dpg.configure_item(path_input, enabled = not repeater.launched.is_set())
+    dpg.configure_item(load_button, enabled = not repeater.launched.is_set())
     
-    dpg.configure_item(start_button, enabled = not repeater.repeating_launched)
-    dpg.configure_item(pause_button, enabled = repeater.repeating_launched and (not repeater.repeating_paused))
-    dpg.configure_item(resume_button, enabled = repeater.repeating_launched and repeater.repeating_paused)
+    dpg.configure_item(start_button, enabled = not repeater.launched.is_set())
+    dpg.configure_item(pause_button, enabled = repeater.launched.is_set() and (not repeater.paused.is_set()))
+    dpg.configure_item(resume_button, enabled = repeater.launched.is_set() and repeater.paused.is_set())
     
-    if repeater.repeating_launched:
-        if repeater.repeating_paused:
+    if repeater.launched.is_set():
+        if repeater.paused.is_set():
             dpg.set_value(repeating_status_text, 'Status: paused.')
         else:
             dpg.set_value(repeating_status_text, f'Status: goal {repeater.get_passed_goal_index()} passed.')

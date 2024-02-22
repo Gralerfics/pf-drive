@@ -1,4 +1,5 @@
 import time
+import threading
 
 import rospy
 
@@ -27,9 +28,10 @@ class Teacher:
         self.params_initialized = False
         self.recording_initialized = False
         
+        self.launched = threading.Event()
+        
         # public
         self.recording: Recording = None
-        self.recording_launched = False
         
         # parameters
         self.params = DictRegulator(rospy.get_param('/tr'))
@@ -112,23 +114,23 @@ class Teacher:
 
         self.recording.clear()
         self.odometry.zeroize()
-        self.recording_launched = False
+        self.launched.clear()
         return True
     
     def start_recording(self):
-        if not self.is_ready() or self.recording_launched:
+        if not self.is_ready() or self.launched.is_set():
             return False
         
         self.reset_recording()
-        self.recording_launched = True
+        self.launched.set()
     
     def stop_recording(self):
-        if not self.is_ready() or not self.recording_launched:
+        if not self.is_ready() or self.launched.is_set():
             return False
         
         path = self.params.persistent.recording_folder + '/' + (self.params.persistent.recording_name if not self.params.persistent.auto_naming else time.strftime('%Y-%m-%d_%H:%M:%S'))
         self.recording.to_path(path)
-        self.recording_launched = False
+        self.launched.clear()
         return True
     
     def difference_under_threshold(self, frame_1: Frame, frame_2: Frame):
@@ -137,18 +139,22 @@ class Teacher:
             frame_1.translation_difference(frame_2) < self.params.teacher.translation_threshold
     
     def odom_received(self, **args):
-        if not self.is_ready() or not self.recording_launched:
+        if not self.is_ready() or not self.launched.is_set():
             return
         
         odom = self.odometry.get_biased_odom()
         if len(self.recording.odoms) == 0 or not self.difference_under_threshold(self.recording.odoms[-1], odom):
+            # raw_image
             if self.params.teacher.save_raw_images:
                 self.recording.raw_images.append(self.camera.get_raw_image())
-                
+            
+            # processed_image
             self.recording.processed_images.append(self.camera.get_processed_image())
             
+            # odom
             self.recording.odoms.append(odom)
             
+            # ground_truth
             if self.params.teacher.save_ground_truth_odoms:
                 if self.global_locator_used:
                     global_frame = self.global_locator.get_global_frame()

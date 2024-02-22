@@ -52,13 +52,13 @@ while dpg.is_dearpygui_running():
     teacher.params.persistent.recording_folder = dpg.get_value(folder_input)
     teacher.params.persistent.recording_name = dpg.get_value(name_input)
     teacher.params.persistent.auto_naming = dpg.get_value(auto_naming_checkbox)
-    dpg.configure_item(folder_input, enabled = not teacher.recording_launched)
-    dpg.configure_item(name_input, enabled = (not dpg.get_value(auto_naming_checkbox)) and (not teacher.recording_launched))
+    dpg.configure_item(folder_input, enabled = not teacher.launched.is_set())
+    dpg.configure_item(name_input, enabled = (not dpg.get_value(auto_naming_checkbox)) and (not teacher.launched.is_set()))
     
-    dpg.configure_item(start_button, enabled = not teacher.recording_launched)
-    dpg.configure_item(stop_button, enabled = teacher.recording_launched)
+    dpg.configure_item(start_button, enabled = not teacher.launched.is_set())
+    dpg.configure_item(stop_button, enabled = teacher.launched.is_set())
     
-    dpg.set_value(recording_status_text, f'Status: {f"{len(teacher.recording.odoms)} goals recorded." if teacher.recording_launched else "stopped."}')
+    dpg.set_value(recording_status_text, f'Status: {f"{len(teacher.recording.odoms)} goals recorded." if teacher.launched.is_set() else "stopped."}')
     
     if teacher.camera.is_ready():
         dpg.set_value('__processed_image_texture', teacher.camera.get_processed_image().to_imgui_texture())
