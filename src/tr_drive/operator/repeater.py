@@ -18,19 +18,12 @@ from tr_drive.sensor.global_locator import GlobalLocator
 from tr_drive.persistent.recording import Recording
 
 
-"""
-    重复.
-    
-    is_ready():
-        为 True 时方允许: 启动; 暂停; 继续; 处理 image 和 odom 消息.
-        要求: recording 和 params 已初始化; devices 已初始化且 ready.
-"""
 class Repeater:
     def __init__(self):
         # private
         self.debugger: Debugger = Debugger(name = 'repeater_debugger')
-        self.recording_and_params_initialized = False
         
+        self.ready = threading.Event()
         self.launched = threading.Event()
         self.paused = threading.Event()
         
@@ -39,6 +32,7 @@ class Repeater:
         
         self.passed_goal_index = 0 # the index of the nearest goal that has been passed
         self.passed_goal_index_lock = threading.Lock()
+        
         self.goal_intervals: list[float] = [] # the intervals between goal i and goal i + 1
         self.goal_distances: list[float] = [] # the distances between goal 0 and goal i
         
@@ -54,6 +48,9 @@ class Repeater:
         
         # load recording
         self.load_recording()
+        
+        # ready
+        self.ready.set()
     
     def init_devices(self):
         self.camera = Camera(
@@ -63,7 +60,7 @@ class Repeater:
             horizontal_fov = self.params.camera.horizontal_fov,
             processed_image_topic = self.params.camera.processed_image_topic
         )
-        self.camera.register_image_received_hook(self.image_received)
+        # self.camera.register_image_received_hook(self.image_received)
         self.camera.wait_until_ready()
         
         self.odometry = Odom(
@@ -108,8 +105,6 @@ class Repeater:
             self.global_locator.wait_until_ready()
     
     def load_recording(self):
-        self.recording_and_params_initialized = False
-        
         # load recording
         self.recording = Recording.from_path(self.params.persistent.recording_path)
         
@@ -132,16 +127,9 @@ class Repeater:
         if self.global_locator_used:
             frame_id = self.params.global_locator.fixed_frame if 'fixed_frame' in self.params.global_locator else 'map'
             self.debugger.publish('/recorded_gts', Frame.to_path(self.recording.ground_truths, frame_id = frame_id))
-        
-        self.recording_and_params_initialized = True
     
     def is_ready(self):
-        return \
-            self.recording_and_params_initialized and \
-            hasattr(self, 'camera') and self.camera is not None and self.camera.is_ready() and \
-            hasattr(self, 'odometry') and self.odometry is not None and self.odometry.is_ready() and \
-            hasattr(self, 'controller') and self.controller is not None and self.controller.is_ready() and \
-            not self.global_locator_used or (hasattr(self, 'global_locator') and self.global_locator is not None and self.global_locator.is_ready())
+        return self.ready.is_set()
     
     def wait_until_ready(self):
         while not rospy.is_shutdown() and not self.is_ready():
@@ -189,9 +177,6 @@ class Repeater:
         self.paused.clear()
         return True
     
-    def is_running(self):
-        return self.launched.is_set() and (not self.paused.is_set())
-    
     def batched_match(self, image, indices):
         offsets = np.zeros(len(indices))
         values = np.zeros(len(indices))
@@ -205,25 +190,29 @@ class Repeater:
     def distance_to_goal(self, d: float):
         return np.searchsorted(self.goal_distances[1:], d, side = 'right')
     
-    def image_received(self, **args):
-        if not self.is_ready() or not self.is_running():
-            return
+    # def image_received(self, **args):
+    #     if not self.is_ready() or not self.launched.is_set() or self.paused.is_set():
+    #         return
     
     def odom_received(self, **args):
-        if not self.is_ready() or not self.is_running():
+        if not self.is_ready() or not self.launched.is_set() or self.paused.is_set():
             return
 
-        if not hasattr(self, 'last_t'):
-            self.last_t = time.time()
-        if not hasattr(self, 'n'):
-            self.n = 0
-        else:
-            self.n += 1
-        t = time.time()
-        if t - self.last_t > 2.0:
-            print(f'fps: {self.n / (t - self.last_t)}')
-            self.last_t = t
-            self.n = 0
+        # if not hasattr(self, 'last_t'):
+        #     self.last_t = time.time()
+        # if not hasattr(self, 'n'):
+        #     self.n = 0
+        # else:
+        #     self.n += 1
+        # t = time.time()
+        # if t - self.last_t > 2.0:
+        #     print(f'fps: {self.n / (t - self.last_t)}')
+        #     self.last_t = t
+        #     self.n = 0
+        
+        # t_odom = self.odometry.get_odom_msg().header.stamp.to_sec()
+        # t_current = time.time()
+        # print(f'{t_current - t_odom}')
         
         # if self.get_passed_goal_index() >= len(self.recording.odoms) - 1:
         #     rospy.loginfo('Finished.')
