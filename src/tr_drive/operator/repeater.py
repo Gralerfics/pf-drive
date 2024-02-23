@@ -127,9 +127,9 @@ class Repeater:
         
         # TODO: debug, publish recording
         self.debugger.publish('/recorded_odoms', Frame.to_path(self.recording.odoms, frame_id = 'odom'))
-        if self.global_locator_used:
-            frame_id = self.params.global_locator.fixed_frame if 'fixed_frame' in self.params.global_locator else 'map'
-            self.debugger.publish('/recorded_gts', Frame.to_path(self.recording.ground_truths, frame_id = frame_id))
+        # if self.global_locator_used:
+        #     frame_id = self.params.global_locator.fixed_frame if 'fixed_frame' in self.params.global_locator else 'map'
+        #     self.debugger.publish('/recorded_gts', Frame.to_path(self.recording.ground_truths, frame_id = frame_id))
     
     def is_ready(self):
         return self.ready.is_set()
@@ -281,19 +281,15 @@ class Repeater:
         self.T_0b = T_0c * correction_offset
 
         # goal
-        DISTANCE_THRESHOLD = 0.01
-        ADVANCE_DISTANCE = 0.2
-        ANGLE_THRESHOLD = 0.025
-
         delta = T_0c.I * self.T_0b
-        if delta.t.norm() < DISTANCE_THRESHOLD or abs(d_ab) < DISTANCE_THRESHOLD:
-            if abs(delta.q.Euler[2]) < ANGLE_THRESHOLD:
+        if delta.t.norm() < self.params.repeater.distance_threshold or abs(d_ab) < self.params.repeater.distance_threshold:
+            if abs(delta.q.Euler[2]) < self.params.repeater.angle_threshold:
                 self.pass_to_next_goal()
                 return
             else:
                 goal_advanced = self.T_0b
         else:
-            goal_advanced = self.T_0b * Frame.from_translation(Vec3(ADVANCE_DISTANCE, 0, 0))
+            goal_advanced = self.T_0b * Frame.from_translation(Vec3(self.params.repeater.goal_advance_distance, 0, 0))
         
         self.debugger.publish('/a', self.T_0a.to_PoseStamped(frame_id = 'odom'))
         self.debugger.publish('/b', self.T_0b.to_PoseStamped(frame_id = 'odom'))

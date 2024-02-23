@@ -4,6 +4,7 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
+        - /Global Options1
         - /TF1/Frames1
         - /Odometry1/Shape1
       Splitter Ratio: 0.5708582997322083
@@ -93,29 +94,31 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
+        base_link:
+          LDS-01:
+            screw0:
+              {}
+            screw1:
+              {}
+            screw2:
+              {}
+            screw3:
+              {}
+            tb3/LDS_01:
+              {}
+          accelerometer:
+            {}
+          compass:
+            {}
+          gyro:
+            {}
+          solid_0:
+            camera:
+              {}
         map:
-          odom:
-            base_link:
-              LDS-01:
-                screw0:
-                  {}
-                screw1:
-                  {}
-                screw2:
-                  {}
-                screw3:
-                  {}
-                tb3/LDS_01:
-                  {}
-              accelerometer:
-                {}
-              compass:
-                {}
-              gyro:
-                {}
-              solid_0:
-                camera:
-                  {}
+          {}
+        odom:
+          {}
       Update Interval: 0
       Value: true
     - Alpha: 0.699999988079071
@@ -327,7 +330,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 2.1787052154541016
+      Distance: 1.4727102518081665
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -335,17 +338,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.3184441328048706
-        Y: 0.4075506627559662
-        Z: -0.24026058614253998
+        X: 0.20460693538188934
+        Y: 0.45977747440338135
+        Z: -0.1623469740152359
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.0197962522506714
+      Pitch: 0.8747963309288025
       Target Frame: <Fixed Frame>
-      Yaw: 4.988576412200928
+      Yaw: 4.953575611114502
     Saved: ~
 Window Geometry:
   Displays:
@@ -365,5 +368,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1917
-  X: 1890
-  Y: 416
+  X: 1908
+  Y: 311
