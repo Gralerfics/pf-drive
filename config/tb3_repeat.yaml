@@ -8,7 +8,7 @@ tr:
         processed_odom_topic: /tr/odometry/processed_odom # debug
     controller:
         cmd_vel_topic: /tb3/controller/cmd_vel
-        k_rho: 0.5 # k_rho > 0
+        k_rho: 0.35 # 0.5 # k_rho > 0
         k_alpha: 3.5 # 5.0 # k_alpha > k_rho
         k_beta: -2.0 # -3.0 # k beta < 0
         k_theta: 7.0

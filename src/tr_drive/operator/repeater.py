@@ -35,6 +35,9 @@ class Repeater:
         
         self.goal_intervals: list[float] = [] # the intervals between goal i and goal i + 1
         self.goal_distances: list[float] = [] # the distances between goal 0 and goal i
+
+        self.T_0a: Frame = None
+        self.T_0b: Frame = None
         
         # parameters (with default camera parameters, will be modified when loading recording)
         self.params = DictRegulator(rospy.get_param('/tr'))
@@ -149,19 +152,22 @@ class Repeater:
         with self.passed_goal_index_lock:
             self.passed_goal_index = idx
 
-    def start_repeating(self):
+    def start(self):
         if not self.is_ready() or self.launched.is_set():
             return False
         
         self.odometry.zeroize()
         self.controller.activate()
         
-        self.set_passed_goal_index(0) # TODO
+        # TODO
+        self.set_passed_goal_index(0)
+        self.T_0a = self.recording.odoms[self.get_passed_goal_index()] # OA
+        self.T_0b = self.recording.odoms[self.get_passed_goal_index() + 1] # in fact, OA + AB
         
         self.launched.set()
         return True
     
-    def pause_repeating(self):
+    def pause(self):
         if not self.is_ready() or not self.launched.is_set() or self.paused.is_set():
             return False
         
@@ -169,8 +175,8 @@ class Repeater:
         self.paused.set()
         return True
     
-    def resume_repeating(self):
-        if not self.is_ready() or not self.launched.is_set() or self.paused.is_set():
+    def resume(self):
+        if not self.is_ready() or not self.launched.is_set() or not self.paused.is_set():
             return False
         
         self.controller.activate()
@@ -193,6 +199,19 @@ class Repeater:
     # def image_received(self, **args):
     #     if not self.is_ready() or not self.launched.is_set() or self.paused.is_set():
     #         return
+
+    def pass_to_next_goal(self):
+        self.inc_passed_goal_index()
+        
+        i = self.get_passed_goal_index()
+        n = len(self.recording.odoms)
+        if i >= n - 1:
+            rospy.loginfo('Finished.')
+            self.pause() # TODO
+            return
+
+        self.T_0a = self.T_0b
+        self.T_0b = self.T_0b * (self.recording.odoms[i].I * self.recording.odoms[i + 1])
     
     def odom_received(self, **args):
         if not self.is_ready() or not self.launched.is_set() or self.paused.is_set():
@@ -214,65 +233,72 @@ class Repeater:
         # t_current = time.time()
         # print(f'{t_current - t_odom}')
         
-        # if self.get_passed_goal_index() >= len(self.recording.odoms) - 1:
-        #     rospy.loginfo('Finished.')
-        #     self.pause_repeating() # TODO
-        #     return
+        i = self.get_passed_goal_index()
+        n = len(self.recording.odoms)
+        r = self.params.repeater.along_path_radius
         
-        # i = self.get_passed_goal_index()
-        # r = self.params.repeater.along_path_radius
+        T_0c: Frame = self.odometry.get_biased_odom()
+        T_cb: Frame = T_0c.I * self.T_0b
+
+        t_0a = self.T_0a.t
+        t_0b = self.T_0b.t
+        t_0c = T_0c.t
         
-        # T_0a: Frame = self.recording.odoms[i]
-        # T_0b: Frame = self.recording.odoms[i + 1]
-        # T_0c: Frame = self.odometry.get_biased_odom()
+        t_ab = t_0b - t_0a
+        t_ac = t_0c - t_0a
+        t_cb = T_cb.t
+
+        d_ab = self.goal_intervals[i]
+        d_cb = t_cb.norm()
         
-        # T_ab = T_0a.I * T_0b
-        # d_ab = self.goal_intervals[i]
-        
-        # T_ac = T_0a.I * T_0c
-        # d_p_ac = Vec3.dot(T_ac.t, T_ab.t) / d_ab if d_ab > 0 else 0
-        # u = np.clip(d_p_ac / d_ab, 0.0, 1.0)
-        
-        # T_cb = T_ac.I * T_ab
-        # d_cb = T_cb.t.norm()
+        d_p_ac = Vec3.dot(t_ac, t_ab) / d_ab if d_ab > 0.005 else 0.5
+        u = np.clip(d_p_ac / d_ab if d_ab > 0.005 else 0.5, 0.0, 1.0)
         
         # along-path correction
-        # scan_indices = list(range(max(0, i - r + 1), min(len(self.recording.odoms), i + r + 1)))
-        # scan_distances = np.array([self.goal_distances[idx] for idx in scan_indices]) - self.goal_distances[i] - d_p_ac
-        # scan_offsets, scan_values = self.batched_match(self.camera.get_processed_image(), scan_indices)
-        # scan_values[scan_values < 0.1] = 0 # TODO, threshold
-        # delta_p = scan_values / scan_values.sum() @ scan_distances
-        # delta_distance = self.params.repeater.k_along_path * delta_p
+        scan_indices = list(range(max(0, i - r + 1), min(len(self.recording.odoms), i + r + 1)))
+        scan_distances = np.array([self.goal_distances[idx] for idx in scan_indices]) - self.goal_distances[i] - d_p_ac # c 处为 0
+        scan_offsets, scan_values = self.batched_match(self.camera.get_processed_image(), scan_indices)
+        scan_values[scan_values < 0.1] = 0 # TODO, threshold
+        delta_p = scan_values / scan_values.sum() @ scan_distances
+        delta_distance = self.params.repeater.k_along_path * delta_p
+        along_path_correction = (d_cb - delta_distance) / d_cb # np.clip((d_cb - delta_distance) / d_cb, scan_distances[0], scan_distances[-1])
+
+        if along_path_correction > 1.0: # if delta_distance > self.goal_intervals[i]: # TODO
+            self.pass_to_next_goal()
+            return
+
+        # rotation correction
+        theta_a = self.px_to_rad(scan_offsets[r - 1])
+        theta_b = self.px_to_rad(scan_offsets[r])
+        delta_theta = (1 - u) * theta_a + u * theta_b
+        rotation_correction = self.params.repeater.k_rotation * delta_theta # 由于逆时针才是正方向，故刚好符号对消.
         
-        # if delta_distance > self.goal_intervals[i]:
-        #     self.inc_passed_goal_index()
-        #     return # TODO
+        print(f'rotation_correction: {rotation_correction}; along_path_correction: {along_path_correction}')
         
-        # along_path_correction = (d_cb - delta_distance) / d_cb
+        # new estimation of T_0b
+        correction_offset = Frame.from_z_rotation(rotation_correction) * T_cb
+        correction_offset.translation *= along_path_correction
+        self.T_0b = T_0c * correction_offset
+
+        # goal
+        DISTANCE_THRESHOLD = 0.01
+        ADVANCE_DISTANCE = 0.2
+        ANGLE_THRESHOLD = 0.025
+
+        delta = T_0c.I * self.T_0b
+        if delta.t.norm() < DISTANCE_THRESHOLD or abs(d_ab) < DISTANCE_THRESHOLD:
+            if abs(delta.q.Euler[2]) < ANGLE_THRESHOLD:
+                self.pass_to_next_goal()
+                return
+            else:
+                goal_advanced = self.T_0b
+        else:
+            goal_advanced = self.T_0b * Frame.from_translation(Vec3(ADVANCE_DISTANCE, 0, 0))
         
-        # # rotation correction
-        # theta_a = self.px_to_rad(scan_offsets[r - 1])
-        # theta_b = self.px_to_rad(scan_offsets[r])
-        # delta_theta = (1 - u) * theta_a + u * theta_b
-        # rotation_correction = self.params.repeater.k_rotation * delta_theta
+        self.debugger.publish('/a', self.T_0a.to_PoseStamped(frame_id = 'odom'))
+        self.debugger.publish('/b', self.T_0b.to_PoseStamped(frame_id = 'odom'))
         
-        # print(f'rotation_correction: {rotation_correction}; along_path_correction: {along_path_correction}')
-        
-        # # goal
-        # goal_offset = Frame.from_z_rotation(rotation_correction) * T_cb
-        # goal_offset.translation *= along_path_correction
-        # goal = T_0c * goal_offset
-        
-        # ADVANCE_DISTANCE = 0.2
-        # goal = goal * Frame.from_translation(Vec3(ADVANCE_DISTANCE, 0, 0)) # TODO: turning goal with no advance distance
-        
-        # ANGLE_THRESHOLD = 0.1
-        # delta = T_0c.I * goal
-        # if delta.t.norm() < ADVANCE_DISTANCE and abs(delta.q.Euler[2]) < ANGLE_THRESHOLD:
-        #     self.inc_passed_goal_index()
-        #     return # TODO
-        
-        # self.controller.set_goal(goal)
+        self.controller.set_goal(goal_advanced)
 
 
 """ TODO ideas

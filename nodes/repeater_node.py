@@ -29,7 +29,7 @@ dpg.setup_dearpygui()
 processed_image_texture, next_goal_image_texture = None, None
 
 def start_repeating_cb():
-    repeater.start_repeating()
+    repeater.start()
     
     w, h = repeater.camera.resize
     global processed_image_texture, next_goal_image_texture
@@ -48,8 +48,8 @@ with dpg.window(tag = 'main'):
     load_button = dpg.add_button(label = 'load', width = 80, height = 30, callback = repeater.load_recording)
     
     start_button = dpg.add_button(label = 'start', width = 80, height = 30, callback = start_repeating_cb)
-    pause_button = dpg.add_button(label = 'pause', width = 80, height = 30, callback = repeater.pause_repeating)
-    resume_button = dpg.add_button(label = 'resume', width = 80, height = 30, callback = repeater.resume_repeating)
+    pause_button = dpg.add_button(label = 'pause', width = 80, height = 30, callback = repeater.pause)
+    resume_button = dpg.add_button(label = 'resume', width = 80, height = 30, callback = repeater.resume)
     
     repeating_status_text = dpg.add_text('')
 

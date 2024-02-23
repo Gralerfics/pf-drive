@@ -25,9 +25,8 @@ class Teacher:
     def __init__(self):
         # private
         self.debugger: Debugger = Debugger(name = 'teacher_debugger')
-        self.params_initialized = False
-        self.recording_initialized = False
         
+        self.ready = threading.Event()
         self.launched = threading.Event()
         
         # public
@@ -37,14 +36,15 @@ class Teacher:
         self.params = DictRegulator(rospy.get_param('/tr'))
         self.params.persistent.add('auto_naming', self.params.persistent.recording_name.startswith('.'))
         self.global_locator_used = 'global_locator' in self.params # 是否引入全局定位信息.
-        self.params_initialized = True
         
         # devices
         self.init_devices()
         
         # recording
         self.init_recording()
-        self.recording_initialized = True
+        
+        # ready
+        self.ready.set()
     
     def init_devices(self):
         self.camera = Camera(
@@ -95,12 +95,7 @@ class Teacher:
         )
     
     def is_ready(self):
-        return \
-            self.params_initialized and \
-            self.recording_initialized and \
-            hasattr(self, 'camera') and self.camera is not None and self.camera.is_ready() and \
-            hasattr(self, 'odometry') and self.odometry is not None and self.odometry.is_ready() and \
-            not self.global_locator_used or (hasattr(self, 'global_locator') and self.global_locator is not None and self.global_locator.is_ready())
+        return self.ready.is_set()
     
     def wait_until_ready(self):
         while not rospy.is_shutdown() and not self.is_ready():
