@@ -59,12 +59,13 @@ class Teacher:
         
         self.odometry = Odom(
             odom_topic = self.params.odometry.odom_topic,
+            biased_odom_frame_id = 'biased_odom',
             processed_odom_topic = self.params.odometry.processed_odom_topic
         )
         self.odometry.register_odom_received_hook(self.odom_received)
         self.odometry.wait_until_ready()
         
-        if self.global_locator_used: # TODO
+        if self.global_locator_used:
             global_locator_type = self.params.global_locator.type
             if global_locator_type == 'topic':
                 self.global_locator = GlobalLocator(

@@ -69,6 +69,7 @@ class Repeater:
         
         self.odometry = Odom(
             odom_topic = self.params.odometry.odom_topic,
+            biased_odom_frame_id = 'biased_odom',
             processed_odom_topic = self.params.odometry.processed_odom_topic
         )
         self.odometry.register_odom_received_hook(self.odom_received)
@@ -230,17 +231,17 @@ class Repeater:
         if not self.is_ready() or not self.launched.is_set() or self.paused.is_set():
             return
 
-        # if not hasattr(self, 'last_t'):
-        #     self.last_t = time.time()
-        # if not hasattr(self, 'n'):
-        #     self.n = 0
-        # else:
-        #     self.n += 1
-        # t = time.time()
-        # if t - self.last_t > 2.0:
-        #     print(f'fps: {self.n / (t - self.last_t)}')
-        #     self.last_t = t
-        #     self.n = 0
+        if not hasattr(self, 'last_t'):
+            self.last_t = time.time()
+        if not hasattr(self, 'n'):
+            self.n = 0
+        else:
+            self.n += 1
+        t = time.time()
+        if t - self.last_t > 2.0:
+            print(f'fps: {self.n / (t - self.last_t)}')
+            self.last_t = t
+            self.n = 0
         
         # t_odom = self.odometry.get_odom_msg().header.stamp.to_sec()
         # t_current = time.time()
@@ -286,7 +287,7 @@ class Repeater:
         delta_theta = (1 - u) * theta_a + u * theta_b
         rotation_correction = self.params.repeater.k_rotation * delta_theta # 由于逆时针才是正方向，故刚好符号对消.
         
-        print(f'rotation_correction: {rotation_correction}; along_path_correction: {along_path_correction}')
+        # print(f'rotation_correction: {rotation_correction}; along_path_correction: {along_path_correction}')
         
         # new estimation of T_0b
         correction_offset = Frame.from_z_rotation(rotation_correction) * T_cb
@@ -308,7 +309,7 @@ class Repeater:
         self.debugger.publish('/a', self.T_0a.to_PoseStamped(frame_id = frame_id))
         self.debugger.publish('/b', self.T_0b.to_PoseStamped(frame_id = frame_id))
         
-        # self.controller.set_goal(goal_advanced)
+        self.controller.set_goal(goal_advanced)
 
 
 """ TODO ideas

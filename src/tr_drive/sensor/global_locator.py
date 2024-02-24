@@ -121,9 +121,9 @@ class GlobalLocator:
         else:
             raise ValueError('Invalid locator type.')
     
-    def publish_map_frame(self, odom_frame: Frame, global_frame: Frame, odom_frame_id = 'odom'):
+    def publish_map_frame(self, odom_frame: Frame, global_frame: Frame, odom_frame_id = 'odom'): # TODO: to be fixed
         # 由里程计信息和全局信息得到 /map 和 /odom 关系并发布; 此处 odom_frame 由 get_odom() 所获, frame_id 为 odom.
-        T_map_odom = odom_frame.I * global_frame
+        T_map_odom = global_frame * odom_frame.I
         self.tf_broadcaster.sendTransform(
             T_map_odom.t.to_list(),
             T_map_odom.q.to_list(),

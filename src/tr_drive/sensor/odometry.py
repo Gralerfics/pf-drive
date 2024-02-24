@@ -59,7 +59,7 @@ class Odom:
             self.odom_msg = msg
             self.odom = Frame(msg)
         
-        # publish tf: biased_odom; TODO: to be checked
+        # publish biased_odom to tf
         bias = self.get_bias_inv().I
         self.tf_broadcaster.sendTransform(
             (bias.t.x, bias.t.y, bias.t.z),
