@@ -10,18 +10,10 @@ tr:
         odom_topic: /tb3/controller/odom
         processed_odom_topic: /tr/odometry/processed_odom # debug
     global_locator:
-        # type: 'tf'
-        # fixed_frame: 'map'
-
-        # type: 'topic'
-        # topic: '/amcl_pose'
-        # topic_type: 'PoseWithCovarianceStamped'
-        # fixed_frame: 'map'
-
         type: 'webots'
+        fixed_frame_id: 'map'
         robot_def: 'tb3'
         robot_name: 'tb3'
-        fixed_frame: 'map'
     teacher:
         save_raw_images: true
         save_ground_truth_odoms: true

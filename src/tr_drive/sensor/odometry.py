@@ -102,6 +102,9 @@ class Odom:
         with self.odom_lock:
             self.bias_inv = self.odom.I
     
+    def get_odom_frame_id(self):
+        return self.get_odom_msg().header.frame_id
+    
     def get_odom_msg(self):
         with self.odom_lock:
             return self.odom_msg

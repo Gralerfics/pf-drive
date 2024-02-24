@@ -59,7 +59,6 @@ class Teacher:
         
         self.odometry = Odom(
             odom_topic = self.params.odometry.odom_topic,
-            biased_odom_frame_id = 'biased_odom',
             processed_odom_topic = self.params.odometry.processed_odom_topic
         )
         self.odometry.register_odom_received_hook(self.odom_received)
@@ -70,24 +69,26 @@ class Teacher:
             if global_locator_type == 'topic':
                 self.global_locator = GlobalLocator(
                     locator_type = global_locator_type,
-                    topic = self.params.global_locator.topic,
-                    topic_type = type_from_str(self.params.global_locator.topic_type),
                     odometry = self.odometry,
-                    fixed_frame = self.params.global_locator.fixed_frame if 'fixed_frame' in self.params.global_locator else None
+                    fixed_frame_id = self.params.global_locator.fixed_frame_id,
+
+                    topic = self.params.global_locator.topic,
+                    topic_type = type_from_str(self.params.global_locator.topic_type)
                 )
             elif global_locator_type == 'tf':
                 self.global_locator = GlobalLocator(
                     locator_type = global_locator_type,
                     odometry = self.odometry,
-                    fixed_frame = self.params.global_locator.fixed_frame
+                    fixed_frame_id = self.params.global_locator.fixed_frame
                 )
             else: # global_locator_type == 'webots':
                 self.global_locator = GlobalLocator(
                     locator_type = global_locator_type,
-                    robot_def = self.params.global_locator.robot_def,
-                    robot_name = self.params.global_locator.robot_name,
                     odometry = self.odometry,
-                    fixed_frame = self.params.global_locator.fixed_frame if 'fixed_frame' in self.params.global_locator else None
+                    fixed_frame_id = self.params.global_locator.fixed_frame_id,
+                    
+                    robot_def = self.params.global_locator.robot_def,
+                    robot_name = self.params.global_locator.robot_name
                 )
             # self.global_locator.register_global_frame_received_hook(self.global_frame_received)
             self.global_locator.wait_until_ready()

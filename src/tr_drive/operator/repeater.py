@@ -69,7 +69,6 @@ class Repeater:
         
         self.odometry = Odom(
             odom_topic = self.params.odometry.odom_topic,
-            biased_odom_frame_id = 'biased_odom',
             processed_odom_topic = self.params.odometry.processed_odom_topic
         )
         self.odometry.register_odom_received_hook(self.odom_received)
@@ -89,7 +88,6 @@ class Repeater:
             rotation_tolerance = self.params.controller.rotation_tolerance
         )
         self.controller.set_odometry(self.odometry)
-        # self.controller.register_goal_reached_hook(self.goal_reached)
         self.controller.wait_until_ready()
         
         if self.global_locator_used:
@@ -97,24 +95,26 @@ class Repeater:
             if global_locator_type == 'topic':
                 self.global_locator = GlobalLocator(
                     locator_type = global_locator_type,
-                    topic = self.params.global_locator.topic,
-                    topic_type = type_from_str(self.params.global_locator.topic_type),
                     odometry = self.odometry,
-                    fixed_frame = self.params.global_locator.fixed_frame if 'fixed_frame' in self.params.global_locator else None
+                    fixed_frame_id = self.params.global_locator.fixed_frame_id,
+
+                    topic = self.params.global_locator.topic,
+                    topic_type = type_from_str(self.params.global_locator.topic_type)
                 )
             elif global_locator_type == 'tf':
                 self.global_locator = GlobalLocator(
                     locator_type = global_locator_type,
                     odometry = self.odometry,
-                    fixed_frame = self.params.global_locator.fixed_frame
+                    fixed_frame_id = self.params.global_locator.fixed_frame
                 )
             else: # global_locator_type == 'webots':
                 self.global_locator = GlobalLocator(
                     locator_type = global_locator_type,
-                    robot_def = self.params.global_locator.robot_def,
-                    robot_name = self.params.global_locator.robot_name,
                     odometry = self.odometry,
-                    fixed_frame = self.params.global_locator.fixed_frame if 'fixed_frame' in self.params.global_locator else None
+                    fixed_frame_id = self.params.global_locator.fixed_frame_id,
+                    
+                    robot_def = self.params.global_locator.robot_def,
+                    robot_name = self.params.global_locator.robot_name
                 )
             # self.global_locator.register_global_frame_received_hook(self.global_frame_received)
             self.global_locator.wait_until_ready()
@@ -136,14 +136,6 @@ class Repeater:
         self.params.camera.resize = self.recording.params['image']['resize']
         self.params.camera.horizontal_fov = self.recording.params['image']['horizontal_fov']
         self.camera.set_params(**self.params.camera.to_dict())
-        
-        # publish paths; TODO: to be checked
-        frame_id = self.odometry.get_biased_odom_frame_id()
-        self.debugger.publish('/recorded_odoms', Frame.to_path(self.recording.odoms, frame_id = frame_id))
-        if self.global_locator_used:
-            frame_id = self.global_locator.get_global_frame_id()
-            if frame_id is not None:
-                self.debugger.publish('/recorded_gts', Frame.to_path(self.recording.ground_truths, frame_id = frame_id))
     
     def is_ready(self):
         return self.ready.is_set()
@@ -157,7 +149,7 @@ class Repeater:
     def inc_passed_goal_index(self):
         with self.passed_goal_index_lock:
             self.passed_goal_index += 1
-    
+
     def get_passed_goal_index(self):
         with self.passed_goal_index_lock:
             return self.passed_goal_index
@@ -173,10 +165,24 @@ class Repeater:
         self.odometry.zeroize()
         self.controller.activate()
         
-        # TODO: global localization
+        # TODO: 全局定位; 下面皆暂时以第一点为起点.
+
+        # 初始化 T_0a, T_0b, passed_goal_index
         self.set_passed_goal_index(0)
         self.T_0a = self.recording.odoms[self.get_passed_goal_index()] # OA
         self.T_0b = self.recording.odoms[self.get_passed_goal_index() + 1] # in fact, OA + AB
+
+        # 起点对齐
+        if self.global_locator_used and len(self.recording.ground_truths) > 0:
+            self.global_locator.align_frame(self.odometry.get_odom(), self.recording.ground_truths[0])
+        
+        # 发布路径
+        biased_odom_frame_id = self.odometry.get_biased_odom_frame_id()
+        self.debugger.publish('/recorded_odoms', Frame.to_path(self.recording.odoms, frame_id = biased_odom_frame_id))
+        if self.global_locator_used:
+            aligned_global_frame_id = self.global_locator.get_aligned_global_frame_id()
+            if aligned_global_frame_id is not None:
+                self.debugger.publish('/recorded_gts', Frame.to_path(self.recording.ground_truths, frame_id = aligned_global_frame_id))
         
         self.launched.set()
         return True
@@ -231,17 +237,17 @@ class Repeater:
         if not self.is_ready() or not self.launched.is_set() or self.paused.is_set():
             return
 
-        if not hasattr(self, 'last_t'):
-            self.last_t = time.time()
-        if not hasattr(self, 'n'):
-            self.n = 0
-        else:
-            self.n += 1
-        t = time.time()
-        if t - self.last_t > 2.0:
-            print(f'fps: {self.n / (t - self.last_t)}')
-            self.last_t = t
-            self.n = 0
+        # if not hasattr(self, 'last_t'):
+        #     self.last_t = time.time()
+        # if not hasattr(self, 'n'):
+        #     self.n = 0
+        # else:
+        #     self.n += 1
+        # t = time.time()
+        # if t - self.last_t > 2.0:
+        #     print(f'fps: {self.n / (t - self.last_t)}')
+        #     self.last_t = t
+        #     self.n = 0
         
         # t_odom = self.odometry.get_odom_msg().header.stamp.to_sec()
         # t_current = time.time()
@@ -274,11 +280,12 @@ class Repeater:
         scan_offsets, scan_values = self.batched_match(self.camera.get_processed_image(), scan_indices)
         scan_values[scan_values < 0.1] = 0 # TODO, threshold
         delta_p = scan_values / scan_values.sum() @ scan_distances
-        delta_distance = self.params.repeater.k_along_path * delta_p
-        along_path_correction = (d_cb - delta_distance) / d_cb # np.clip((d_cb - delta_distance) / d_cb, scan_distances[0], scan_distances[-1])
+        delta_distance = self.params.repeater.k_along_path * delta_p # np.clip((d_cb - delta_distance) / d_cb, scan_distances[0], scan_distances[-1])
+        along_path_correction = (d_cb - delta_distance) / d_cb
 
         if along_path_correction > 1.0: # if delta_distance > self.goal_intervals[i]:
             self.pass_to_next_goal()
+            print('along_path_correction > 1.0')
             return
 
         # rotation correction
@@ -287,7 +294,7 @@ class Repeater:
         delta_theta = (1 - u) * theta_a + u * theta_b
         rotation_correction = self.params.repeater.k_rotation * delta_theta # 由于逆时针才是正方向，故刚好符号对消.
         
-        # print(f'rotation_correction: {rotation_correction}; along_path_correction: {along_path_correction}')
+        print(f'rotation_correction: {rotation_correction}; along_path_correction: {along_path_correction}')
         
         # new estimation of T_0b
         correction_offset = Frame.from_z_rotation(rotation_correction) * T_cb
@@ -299,15 +306,16 @@ class Repeater:
         if delta.t.norm() < self.params.repeater.distance_threshold or abs(d_ab) < self.params.repeater.distance_threshold:
             if abs(delta.q.Euler[2]) < self.params.repeater.angle_threshold:
                 self.pass_to_next_goal()
+                print('in tolerance')
                 return
             else:
                 goal_advanced = self.T_0b
         else:
             goal_advanced = self.T_0b * Frame.from_translation(Vec3(self.params.repeater.goal_advance_distance, 0, 0))
         
-        frame_id = self.odometry.get_biased_odom_frame_id()
-        self.debugger.publish('/a', self.T_0a.to_PoseStamped(frame_id = frame_id))
-        self.debugger.publish('/b', self.T_0b.to_PoseStamped(frame_id = frame_id))
+        biased_odom_frame_id = self.odometry.get_biased_odom_frame_id()
+        self.debugger.publish('/a', self.T_0a.to_PoseStamped(frame_id = biased_odom_frame_id))
+        self.debugger.publish('/b', self.T_0b.to_PoseStamped(frame_id = biased_odom_frame_id))
         
         self.controller.set_goal(goal_advanced)
 

@@ -16,9 +16,10 @@ from tr_drive.sensor.odometry import Odom
 """
     用于获取全局定位 (作为真值参考等).
     几种类型:
-        topic 类型需提供 topic, topic_type, [odometry, fixed_frame];
-        tf 类型需提供 fixed_frame, odometry;
-        webots 类型需提供 robot_def, robot_name, odometry, [fixed_frame].
+        topic 类型需提供 topic, topic_type, odometry, fixed_frame;
+        tf 类型需提供 odometry, fixed_frame;
+        webots 类型需提供 robot_def, robot_name, odometry, fixed_frame.
+    传入时应保证 odometry 已 ready.
     
     register_x_hook():
         注册新的回调函数到列表.
@@ -33,6 +34,9 @@ from tr_drive.sensor.odometry import Odom
 class GlobalLocator:
     def __init__(self,
         locator_type: str,
+        odometry: Odom,
+        fixed_frame_id: str,
+        aligned_global_frame_id = 'aligned_map',
         **kwargs
     ):
         # private
@@ -42,6 +46,8 @@ class GlobalLocator:
         # public
         self.global_frame_lock = threading.Lock()
         self.global_frame: Frame = None # frame_id = map
+        self.alignment_lock = threading.Lock()
+        self.alignment: Frame = Frame()
         
         # parameters
         self.LOCATOR_TYPE_TOPIC = 'topic'
@@ -49,38 +55,29 @@ class GlobalLocator:
         self.LOCATOR_TYPE_WEBOTS = 'webots'
 
         self.locator_type = locator_type
+        self.odometry: Odom = odometry
+        self.fixed_frame_id = fixed_frame_id
+        self.aligned_global_frame_id = aligned_global_frame_id
         self.params = kwargs
+
+        self.odom_frame_id = self.odometry.get_odom_frame_id()
         
-        # topics
+        # clients
+        self.tf_broadcaster = tf.TransformBroadcaster() # 用于发布 map -> odom, 以及 map -> aligned_map 的变换.
+        self.tf_listener = tf.TransformListener()
+        
         if self.locator_type == self.LOCATOR_TYPE_TOPIC:
-            # 参数: topic, topic_type, [odometry, fixed_frame]
             self.topic = self.params['topic']
             self.topic_type = self.params['topic_type']
-            self.odometry: Odom = self.params['odometry'] if 'odometry' in self.params.keys() else None
-            self.fixed_frame = self.params['fixed_frame'] if 'fixed_frame' in self.params.keys() else None
 
             # 用于订阅指定话题
-            self.sub_topic = rospy.Subscriber(self.topic, self.topic_type, self.topic_type_cb, queue_size = 1) # TODO: queue_size
-
-            # 用于发布 map to odom (optional)
-            if self.fixed_frame is not None and self.odometry is not None:
-                self.tf_broadcaster = tf.TransformBroadcaster()
+            self.sub_topic = rospy.Subscriber(self.topic, self.topic_type, self.topic_type_cb, queue_size = 1)
         elif self.locator_type == self.LOCATOR_TYPE_TF:
-            # 参数: fixed_frame, odometry
-            self.fixed_frame = self.params['fixed_frame']
-            self.odometry: Odom = self.params['odometry']
-            
-            # 用于接收 TF 关系
-            self.tf_listener = tf.TransformListener()
-
             # 以 odom 的接收进行回调
             self.odometry.register_odom_received_hook(self.tf_type_cb)
         elif self.locator_type == self.LOCATOR_TYPE_WEBOTS:
-            # 参数: robot_def, robot_name, odometry, [fixed_frame]
             self.robot_def = self.params['robot_def']
             self.robot_name = self.params['robot_name']
-            self.odometry: Odom = self.params['odometry'] #  if 'odometry' in self.params.keys() else None
-            self.fixed_frame = self.params['fixed_frame'] if 'fixed_frame' in self.params.keys() else None
             
             # 定义服务
             SERVICE_GET_FROM_DEF = '/' + self.robot_name + '/supervisor/get_from_def'
@@ -101,13 +98,8 @@ class GlobalLocator:
             except rospy.ServiceException as e: # TODO
                 rospy.logerr('Service call get_from_def failed.')
 
-            # 用于发布 map to odom (optional)
-            if self.fixed_frame is not None and self.odometry is not None:
-                self.tf_broadcaster = tf.TransformBroadcaster()
-
-            # 以 odom 的接收进行回调 (暂定, 由此导致 odometry 必选)
-            if self.odometry is not None:
-                self.odometry.register_odom_received_hook(self.webots_type_cb)
+            # 以 odom 的接收进行回调
+            self.odometry.register_odom_received_hook(self.webots_type_cb)
         else:
             raise ValueError('Invalid locator type.')
     
@@ -121,62 +113,77 @@ class GlobalLocator:
         else:
             raise ValueError('Invalid locator type.')
     
-    def publish_map_frame(self, odom_frame: Frame, global_frame: Frame, odom_frame_id = 'odom'): # TODO: to be fixed
+    def publish_map_frame(self, odom_frame: Frame, global_frame: Frame, odom_frame_id = 'odom', global_frame_id = 'map'):
+        # 给出某点在 map 和 odom 下的坐标, 计算并发布 map -> odom 变换.
         # 由里程计信息和全局信息得到 /map 和 /odom 关系并发布; 此处 odom_frame 由 get_odom() 所获, frame_id 为 odom.
-        T_map_odom = global_frame * odom_frame.I
+        T_map_odom = global_frame * odom_frame.I # T_map_odom = T_map_p * T_p_odom = T_map_p * Inv(T_odom_p)
         self.tf_broadcaster.sendTransform(
             T_map_odom.t.to_list(),
             T_map_odom.q.to_list(),
             rospy.Time.now(),
             odom_frame_id,
-            self.fixed_frame
+            global_frame_id
         )
+    
+    def publish_aligned_map_frame(self, global_frame_id = 'map', aligned_global_frame_id = 'aligned_map'):
+        alignment = self.get_alignment()
+        self.tf_broadcaster.sendTransform(
+            alignment.t.to_list(),
+            alignment.q.to_list(),
+            rospy.Time.now(),
+            aligned_global_frame_id,
+            global_frame_id
+        )
+    
+    def get_map_to_odom_frame(self):
+        # 统一接收 map -> odom 变换 (T_map_odom), 可能来自 tf 模式的 tf 树或者另外两个模式发布出去的变换.
+        try:
+            (trans, rot) = self.tf_listener.lookupTransform(self.fixed_frame_id, self.odom_frame_id, rospy.Time(0))
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+            return
+        return Frame(Vec3(trans), Quat(rot))
 
     def call_hooks(self):
         if self.is_ready(): # 保证自身 ready 后再执行回调函数.
             for hook in self.global_frame_received_hooks:
                 hook()
-                # hook(global_frame = self.get_global_frame())
     
+    """
+        各模式 callback 的要求:
+            计算 self.global_frame;
+            若无则发布 map -> odom 变换;
+            发布 map -> aligned_map 变换;
+            执行回调函数.
+    """
+
     def topic_type_cb(self, msg): # topic 模式
-        if self.odometry is not None and not self.odometry.is_ready():
-            return
-        
         # 订阅话题直接获取全局坐标
         with self.global_frame_lock:
-            self.global_frame = Frame(msg) # TODO: check msg type
+            self.global_frame = Frame(msg)
         
         # 计算并发布 map -> odom 变换
-        odom_frame_id = self.odometry.get_odom_msg().header.frame_id
-        if self.fixed_frame is not None and self.odometry is not None:
-            odom_frame = self.odometry.get_odom()
-            self.publish_map_frame(odom_frame, self.global_frame, odom_frame_id)
+        self.publish_map_frame(self.odometry.get_odom(), self.global_frame, self.odom_frame_id, self.fixed_frame_id)
+
+        # 发布 map -> aligned_map 变换
+        self.publish_aligned_map_frame(self.fixed_frame_id, self.aligned_global_frame_id)
         
         # 调用回调函数
         self.call_hooks()
     
     def tf_type_cb(self): # tf 模式
-        if self.odometry is not None and not self.odometry.is_ready():
-            return
-        
         # 获取 map -> odom 的变换, 计算全局坐标
-        odom_frame_id = self.odometry.get_odom_msg().header.frame_id
-        odom_frame = self.odometry.get_odom()
-        try:
-            (trans, rot) = self.tf_listener.lookupTransform(self.fixed_frame, odom_frame_id, rospy.Time(0))
-        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-            return
-        frame_map_odom = Frame(Vec3(trans), Quat(rot)) # map -> odom
+        T_odom_p = self.odometry.get_odom()
+        T_map_odom = self.get_map_to_odom_frame()
         with self.global_frame_lock:
-            self.global_frame = frame_map_odom * odom_frame
+            self.global_frame = T_map_odom * T_odom_p
+        
+        # 发布 map -> aligned_map 变换
+        self.publish_aligned_map_frame(self.fixed_frame_id, self.aligned_global_frame_id)
         
         # 调用回调函数
         self.call_hooks()
     
     def webots_type_cb(self): # webots 模式
-        if self.odometry is not None and not self.odometry.is_ready():
-            return
-        
         # 通过服务获取全局坐标
         try:
             position_request = node_get_positionRequest(node = self.node_handler)
@@ -191,10 +198,10 @@ class GlobalLocator:
             rospy.logerr('Service call node_get_position or node_get_orientation failed.')
         
         # 计算并发布 map -> odom 变换
-        odom_frame_id = self.odometry.get_odom_msg().header.frame_id
-        if self.fixed_frame is not None and self.odometry is not None:
-            odom_frame = self.odometry.get_odom()
-            self.publish_map_frame(odom_frame, self.global_frame, odom_frame_id)
+        self.publish_map_frame(self.odometry.get_odom(), self.global_frame, self.odom_frame_id, self.fixed_frame_id)
+
+        # 发布 map -> aligned_map 变换
+        self.publish_aligned_map_frame(self.fixed_frame_id, self.aligned_global_frame_id)
 
         # 调用回调函数
         self.call_hooks()
@@ -212,10 +219,27 @@ class GlobalLocator:
             time.sleep(0.2)
         rospy.loginfo('Global locator is ready.')
     
-    def get_global_frame_id(self): # 无则 None
-        return self.fixed_frame if hasattr(self, 'fixed_frame') else None
+    def align_frame(self, odom_frame: Frame, global_frame: Frame): # odom_frame -> T_odom_p, global_frame -> T_map_p
+        # 计算 alignment, 令 map 下的 global_frame 在左乘 alignment 后与 odom 下的 odom_frame 重合.
+        T_map_odom = self.get_map_to_odom_frame()
+        with self.alignment_lock:
+            self.alignment = global_frame.I * T_map_odom * odom_frame
+    
+    def get_alignment(self):
+        with self.alignment_lock:
+            return self.alignment
+    
+    def get_global_frame_id(self):
+        return self.fixed_frame_id
     
     def get_global_frame(self):
         with self.global_frame_lock:
             return self.global_frame
+    
+    def get_aligned_global_frame_id(self):
+        return self.aligned_global_frame_id
+    
+    def get_aligned_global_frame(self):
+        with self.global_frame_lock:
+            return self.get_alignment() * self.global_frame
 
