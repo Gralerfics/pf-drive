@@ -132,7 +132,7 @@ class Teacher:
         self.launched.set()
     
     def stop_recording(self):
-        if not self.is_ready() or self.launched.is_set():
+        if not self.is_ready() or not self.launched.is_set():
             return False
         
         path = self.params.persistent.recording_folder + '/' + (self.params.persistent.recording_name if not self.params.persistent.auto_naming else time.strftime('%Y-%m-%d_%H:%M:%S'))
