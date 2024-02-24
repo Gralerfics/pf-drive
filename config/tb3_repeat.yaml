@@ -9,9 +9,9 @@ tr:
     controller:
         cmd_vel_topic: /tb3/controller/cmd_vel
         k_rho: 0.35 # 0.5 # k_rho > 0
-        k_alpha: 3.0 # 5.0 # k_alpha > k_rho
-        k_beta: -2.0 # -3.0 # k beta < 0
-        k_theta: 5.0
+        k_alpha: 1.75 # 5.0 # k_alpha > k_rho
+        k_beta: -1.25 # -3.0 # k beta < 0
+        k_theta: 2.0 # 7.0
         velocity_min: 0.0
         velocity_max: 0.2
         omega_min: 0.15

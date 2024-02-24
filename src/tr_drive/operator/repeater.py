@@ -288,9 +288,9 @@ class Repeater:
 
         if along_path_correction > 1.0: # [理论上这不是到达目标条件, 暂时先如此] 基本无超前或滞后
             self.pass_to_next_goal()
-            print('along_path_correction > 1.0')
+            # print('along_path_correction > 1.0')
             return
-        
+
         # if u > 1.0 - 1e-3: # 投影点到达下个目标
         #     self.pass_to_next_goal()
         #     print('u -> 1.0')
@@ -314,7 +314,7 @@ class Repeater:
         if delta.t.norm() < self.params.repeater.distance_threshold or turning_goal:
             if abs(delta.q.Euler[2]) < self.params.repeater.angle_threshold:
                 self.pass_to_next_goal() # 里程计反馈到达设定的目标
-                print('in tolerance')
+                # print('in tolerance')
                 return
             else:
                 goal_advanced = self.T_0b
@@ -324,12 +324,13 @@ class Repeater:
         biased_odom_frame_id = self.odometry.get_biased_odom_frame_id()
         self.debugger.publish('/a', self.T_0a.to_PoseStamped(frame_id = biased_odom_frame_id))
         self.debugger.publish('/b', self.T_0b.to_PoseStamped(frame_id = biased_odom_frame_id))
-        print(self.T_0b)
         
         self.controller.set_goal(goal_advanced)
 
 
 """ TODO ideas
+控制器:
+    [important] 修改 goal_controller, 减少目标平移对旋转指令的即时影响; 或许也可以增大 advance distance?
 算法：
     金字塔匹配辅助确认距离;
     互相关加权, 倾向小角度;
