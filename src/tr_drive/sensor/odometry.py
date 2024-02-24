@@ -2,6 +2,7 @@ import time
 import threading
 
 import rospy
+import tf
 from nav_msgs.msg import Odometry
 
 from tr_drive.util.debug import Debugger
@@ -28,6 +29,7 @@ from tr_drive.util.conversion import Frame
 class Odom:
     def __init__(self,
         odom_topic: str,
+        biased_odom_frame_id: str = 'biased_odom',
         processed_odom_topic: str = '/tr/odometry/processed'
     ):
         # private
@@ -38,14 +40,16 @@ class Odom:
         self.odom_lock = threading.Lock()
         self.odom_msg: Odometry = None
         self.bias_inv: Frame = Frame()
-        self.odom: Frame = None
+        self.odom: Frame = None # frame_id = odom
         
         # parameters
         self.odom_topic = odom_topic
+        self.biased_odom_frame_id = biased_odom_frame_id
         self.processed_odom_topic = processed_odom_topic
         
         # topics
-        self.sub_odom = rospy.Subscriber(self.odom_topic, Odometry, self.odom_cb, queue_size = 1) # TODO: queue_size
+        self.sub_odom = rospy.Subscriber(self.odom_topic, Odometry, self.odom_cb, queue_size = 1)
+        self.tf_broadcaster = tf.TransformBroadcaster()
     
     def __del__(self):
         self.sub_odom.unregister()
@@ -54,6 +58,16 @@ class Odom:
         with self.odom_lock:
             self.odom_msg = msg
             self.odom = Frame(msg)
+        
+        # publish tf: biased_odom; TODO: to be checked
+        bias = self.get_bias_inv().I
+        self.tf_broadcaster.sendTransform(
+            (bias.t.x, bias.t.y, bias.t.z),
+            (bias.q.x, bias.q.y, bias.q.z, bias.q.w),
+            rospy.Time.now(),
+            self.biased_odom_frame_id,
+            self.odom_msg.header.frame_id
+        )
         
         if self.is_ready(): # 保证自身 ready 后再执行回调函数.
             for hook in self.odom_received_hooks:
@@ -73,6 +87,13 @@ class Odom:
             time.sleep(0.2)
         rospy.loginfo('Odometry is ready.')
     
+    def get_odom_frame_id(self):
+        odom_msg = self.get_odom_msg()
+        return odom_msg.header.frame_id
+    
+    def get_biased_odom_frame_id(self):
+        return self.biased_odom_frame_id
+    
     def reset(self): # 重置零偏
         with self.odom_lock:
             self.bias_inv = Frame()
@@ -88,6 +109,10 @@ class Odom:
     def get_odom(self):
         with self.odom_lock:
             return self.odom
+    
+    def get_bias_inv(self):
+        with self.odom_lock:
+            return self.bias_inv
     
     def get_biased_odom(self):
         with self.odom_lock:

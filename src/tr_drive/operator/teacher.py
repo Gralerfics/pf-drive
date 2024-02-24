@@ -64,19 +64,29 @@ class Teacher:
         self.odometry.register_odom_received_hook(self.odom_received)
         self.odometry.wait_until_ready()
         
-        if self.global_locator_used:
+        if self.global_locator_used: # TODO
             global_locator_type = self.params.global_locator.type
-            if global_locator_type == 'tf':
-                self.global_locator = GlobalLocator(
-                    locator_type = global_locator_type,
-                    fixed_frame = self.params.global_locator.fixed_frame,
-                    odometry = self.odometry
-                )
-            else: # global_locator_type == 'topic'
+            if global_locator_type == 'topic':
                 self.global_locator = GlobalLocator(
                     locator_type = global_locator_type,
                     topic = self.params.global_locator.topic,
-                    topic_type = type_from_str(self.params.global_locator.topic_type)
+                    topic_type = type_from_str(self.params.global_locator.topic_type),
+                    odometry = self.odometry,
+                    fixed_frame = self.params.global_locator.fixed_frame if 'fixed_frame' in self.params.global_locator else None
+                )
+            elif global_locator_type == 'tf':
+                self.global_locator = GlobalLocator(
+                    locator_type = global_locator_type,
+                    odometry = self.odometry,
+                    fixed_frame = self.params.global_locator.fixed_frame
+                )
+            else: # global_locator_type == 'webots':
+                self.global_locator = GlobalLocator(
+                    locator_type = global_locator_type,
+                    robot_def = self.params.global_locator.robot_def,
+                    robot_name = self.params.global_locator.robot_name,
+                    odometry = self.odometry,
+                    fixed_frame = self.params.global_locator.fixed_frame if 'fixed_frame' in self.params.global_locator else None
                 )
             # self.global_locator.register_global_frame_received_hook(self.global_frame_received)
             self.global_locator.wait_until_ready()

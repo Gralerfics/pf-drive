@@ -110,7 +110,7 @@ class DigitalImage:
             return self
         elif self.channel == 3:
             return DigitalImage(np.expand_dims(np.dot(self.data, [0.299, 0.587, 0.114]).astype(np.uint8), axis = 2))
-        elif self.channel == 4: # TODO
+        elif self.channel == 4:
             return DigitalImage(np.expand_dims(np.dot(self.data[:, :, :3], [0.299, 0.587, 0.114]).astype(np.uint8), axis = 2))
         else:
             raise ValueError("Unsupported channel")

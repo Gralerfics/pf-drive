@@ -17,6 +17,7 @@ from tr_drive.sensor.odometry import Odom
     TODO: 按 Odom 中注明的规范进行修改.
     
     goal 导向的控制器, 可暂停和恢复, 调用注册的回调函数.
+        goal 的参考系应为 biased_odom.
     
     set_odometry():
         注册 odometry.
@@ -102,7 +103,7 @@ class GoalController:
         self.deactivate()
         self.cmd_vel_topic = topic
         self.pub_cmd_vel.unregister()
-        self.pub_cmd_vel = rospy.Publisher(self.cmd_vel_topic, Twist, queue_size = 1) # TODO: queue_size
+        self.pub_cmd_vel = rospy.Publisher(self.cmd_vel_topic, Twist, queue_size = 1)
         self.activate()
         return True
 
@@ -113,7 +114,8 @@ class GoalController:
         with self.goal_lock:
             self.goal = goal
             if goal is not None:
-                self.debugger.publish('/goal', goal.to_PoseStamped(frame_id = 'odom'))
+                frame_id = self.odometry.get_biased_odom_frame_id()
+                self.debugger.publish('/goal', goal.to_PoseStamped(frame_id = frame_id))
         return True
     
     def get_goal(self):
@@ -166,8 +168,8 @@ class GoalController:
             return
         
         if self.activated:
-            goal: Frame = self.get_goal().copy()
-            odom: Frame = self.odometry.get_biased_odom() # args['odom']
+            goal: Frame = self.get_goal()
+            odom: Frame = self.odometry.get_biased_odom()
             
             goal_theta = goal.q.Euler[2]
             odom_theta = odom.q.Euler[2]

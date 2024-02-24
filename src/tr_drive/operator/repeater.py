@@ -36,8 +36,9 @@ class Repeater:
         self.goal_intervals: list[float] = [] # the intervals between goal i and goal i + 1
         self.goal_distances: list[float] = [] # the distances between goal 0 and goal i
 
-        self.T_0a: Frame = None
-        self.T_0b: Frame = None
+        # P.S. 命名上 T 代表 Transfrom, 0 为 biased_odom 原点, a 为刚经过的目标, b 为下一个目标, c 为当前 biased_odom.
+        self.T_0a: Frame = None # 故 frame_id 为 'biased_odom'
+        self.T_0b: Frame = None # 同上
         
         # parameters (with default camera parameters, will be modified when loading recording)
         self.params = DictRegulator(rospy.get_param('/tr'))
@@ -92,17 +93,27 @@ class Repeater:
         
         if self.global_locator_used:
             global_locator_type = self.params.global_locator.type
-            if global_locator_type == 'tf':
-                self.global_locator = GlobalLocator(
-                    locator_type = global_locator_type,
-                    fixed_frame = self.params.global_locator.fixed_frame,
-                    odometry = self.odometry
-                )
-            else: # global_locator_type == 'topic'
+            if global_locator_type == 'topic':
                 self.global_locator = GlobalLocator(
                     locator_type = global_locator_type,
                     topic = self.params.global_locator.topic,
-                    topic_type = type_from_str(self.params.global_locator.topic_type)
+                    topic_type = type_from_str(self.params.global_locator.topic_type),
+                    odometry = self.odometry,
+                    fixed_frame = self.params.global_locator.fixed_frame if 'fixed_frame' in self.params.global_locator else None
+                )
+            elif global_locator_type == 'tf':
+                self.global_locator = GlobalLocator(
+                    locator_type = global_locator_type,
+                    odometry = self.odometry,
+                    fixed_frame = self.params.global_locator.fixed_frame
+                )
+            else: # global_locator_type == 'webots':
+                self.global_locator = GlobalLocator(
+                    locator_type = global_locator_type,
+                    robot_def = self.params.global_locator.robot_def,
+                    robot_name = self.params.global_locator.robot_name,
+                    odometry = self.odometry,
+                    fixed_frame = self.params.global_locator.fixed_frame if 'fixed_frame' in self.params.global_locator else None
                 )
             # self.global_locator.register_global_frame_received_hook(self.global_frame_received)
             self.global_locator.wait_until_ready()
@@ -125,11 +136,13 @@ class Repeater:
         self.params.camera.horizontal_fov = self.recording.params['image']['horizontal_fov']
         self.camera.set_params(**self.params.camera.to_dict())
         
-        # TODO: debug, publish recording
-        self.debugger.publish('/recorded_odoms', Frame.to_path(self.recording.odoms, frame_id = 'odom'))
-        # if self.global_locator_used:
-        #     frame_id = self.params.global_locator.fixed_frame if 'fixed_frame' in self.params.global_locator else 'map'
-        #     self.debugger.publish('/recorded_gts', Frame.to_path(self.recording.ground_truths, frame_id = frame_id))
+        # publish paths; TODO: to be checked
+        frame_id = self.odometry.get_biased_odom_frame_id()
+        self.debugger.publish('/recorded_odoms', Frame.to_path(self.recording.odoms, frame_id = frame_id))
+        if self.global_locator_used:
+            frame_id = self.global_locator.get_global_frame_id()
+            if frame_id is not None:
+                self.debugger.publish('/recorded_gts', Frame.to_path(self.recording.ground_truths, frame_id = frame_id))
     
     def is_ready(self):
         return self.ready.is_set()
@@ -159,7 +172,7 @@ class Repeater:
         self.odometry.zeroize()
         self.controller.activate()
         
-        # TODO
+        # TODO: global localization
         self.set_passed_goal_index(0)
         self.T_0a = self.recording.odoms[self.get_passed_goal_index()] # OA
         self.T_0b = self.recording.odoms[self.get_passed_goal_index() + 1] # in fact, OA + AB
@@ -207,7 +220,7 @@ class Repeater:
         n = len(self.recording.odoms)
         if i >= n - 1:
             rospy.loginfo('Finished.')
-            self.pause() # TODO
+            self.pause()
             return
 
         self.T_0a = self.T_0b
@@ -263,7 +276,7 @@ class Repeater:
         delta_distance = self.params.repeater.k_along_path * delta_p
         along_path_correction = (d_cb - delta_distance) / d_cb # np.clip((d_cb - delta_distance) / d_cb, scan_distances[0], scan_distances[-1])
 
-        if along_path_correction > 1.0: # if delta_distance > self.goal_intervals[i]: # TODO
+        if along_path_correction > 1.0: # if delta_distance > self.goal_intervals[i]:
             self.pass_to_next_goal()
             return
 
@@ -291,16 +304,14 @@ class Repeater:
         else:
             goal_advanced = self.T_0b * Frame.from_translation(Vec3(self.params.repeater.goal_advance_distance, 0, 0))
         
-        self.debugger.publish('/a', self.T_0a.to_PoseStamped(frame_id = 'odom'))
-        self.debugger.publish('/b', self.T_0b.to_PoseStamped(frame_id = 'odom'))
+        frame_id = self.odometry.get_biased_odom_frame_id()
+        self.debugger.publish('/a', self.T_0a.to_PoseStamped(frame_id = frame_id))
+        self.debugger.publish('/b', self.T_0b.to_PoseStamped(frame_id = frame_id))
         
-        self.controller.set_goal(goal_advanced)
+        # self.controller.set_goal(goal_advanced)
 
 
 """ TODO ideas
-结构：
-    用 Decorator 重构，把 ready 的判断写成注解。
-
 算法：
     金字塔匹配辅助确认距离;
     互相关加权, 倾向小角度;

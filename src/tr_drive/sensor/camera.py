@@ -46,7 +46,7 @@ class Camera:
         self.processed_image_topic = processed_image_topic
         
         # topics
-        self.sub_raw_image = rospy.Subscriber(self.raw_image_topic, Image, self.raw_image_cb, queue_size = 1) # TODO: queue_size
+        self.sub_raw_image = rospy.Subscriber(self.raw_image_topic, Image, self.raw_image_cb, queue_size = 1)
     
     def __del__(self):
         self.sub_raw_image.unregister()

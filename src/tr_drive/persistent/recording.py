@@ -9,6 +9,7 @@ from tr_drive.util.image import DigitalImage, ImageProcessor
 from tr_drive.util.namespace import recursive_dict_update
 
 
+# TODO: validation
 # recording_name/
 #     parameters.json
 #     raw_image/
@@ -49,7 +50,7 @@ class Recording:
         self.ZERO_FILL_LENGTH = 6 # temporary
     
     @staticmethod
-    def from_path(path): # with name, TODO: index check; exists check
+    def from_path(path): # with name
         recording = Recording()
         with open(path + '/parameters.json', 'r') as f:
             loaded_params = json.load(f)
@@ -104,7 +105,7 @@ class Recording:
                 if filename.endswith('.jpg'):
                     img_cv2 = cv2.imread(raw_image_folder + '/' + filename, cv2.IMREAD_COLOR)
                     img = DigitalImage(img_cv2)
-                    recording.raw_images.append(img) # TODO: can be removed?
+                    recording.raw_images.append(img)
                     
                     processed_img = ImageProcessor.kernel_normalize(img.interpolate(*resize).grayscale(), patch_size)
                     recording.processed_images.append(processed_img)
@@ -112,15 +113,15 @@ class Recording:
             recording.to_path(path) # overwrite
             valid = True
 
-        if len(recording.processed_images) != len(recording.odoms): # TODO
+        if len(recording.processed_images) != len(recording.odoms):
             raise Exception('The number of processed images and odometry data does not match.')
         
         return recording
     
-    def to_path(self, path): # with name, TODO: overwrite check
+    def to_path(self, path): # with name
         os.makedirs(path, exist_ok = True)
         
-        # save parameters, TODO: exception for None values
+        # save parameters
         with open(path + '/parameters.json', 'w') as f:
             json.dump(self.params, f)
         

@@ -67,7 +67,6 @@ class Mat3:
         if len(args) == 0:
             self.data = np.eye(3)
         elif len(args) == 1 and (isinstance(args[0], list) or isinstance(args[0], np.ndarray)):
-            # TODO: assert shape
             self.data = np.array(args[0])
         elif len(args) == 9:
             self.data = np.array(args).reshape(3, 3)
@@ -163,7 +162,7 @@ class Quat:
     def to_np(self):
         return np.array([self.x, self.y, self.z, self.w])
     
-    def to_euler(self): # TODO: validate.
+    def to_euler(self):
         # RPY; ZYX order
         x, y, z, w = self.normalize().to_list()
         roll = np.arctan2(2 * (w * x + y * z), 1 - 2 * (x ** 2 + y ** 2))
@@ -171,7 +170,7 @@ class Quat:
         yaw = np.arctan2(2 * (w * z + x * y), 1 - 2 * (y ** 2 + z ** 2))
         return np.array([roll, pitch, yaw])
     
-    def to_rotation_matrix(self): # TODO: validate.
+    def to_rotation_matrix(self):
         x, y, z, w = self.normalize().to_list()
         return Mat3([
             [1 - 2 * (y ** 2 + z ** 2), 2 * (x * y - z * w), 2 * (x * z + y * w)],
@@ -179,7 +178,7 @@ class Quat:
             [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x ** 2 + y ** 2)]
         ])
     
-    def to_rotation_vector(self): # TODO: validate.
+    def to_rotation_vector(self):
         x, y, z, w = self.normalize().to_list()
         theta = 2 * np.arccos(w)
         n = Vec3([x, y, z]).normalize()
@@ -210,20 +209,27 @@ class Frame:
         if len(args) == 0:
             self.translation = Vec3()
             self.quaternion = Quat()
+            # self.frame_id: str = ''
         elif len(args) == 1:
             if isinstance(args[0], Pose):
                 frame = Frame.from_Pose(args[0])
             elif isinstance(args[0], PoseStamped):
                 frame = Frame.from_Pose(args[0].pose)
+                # frame.frame_id = args[0].header.frame_id
             elif isinstance(args[0], PoseWithCovariance):
                 frame = Frame.from_Pose(args[0].pose)
             elif isinstance(args[0], PoseWithCovarianceStamped):
                 frame = Frame.from_Pose(args[0].pose.pose)
+                # frame.frame_id = args[0].header.frame_id
             elif isinstance(args[0], Odometry):
-                frame = Frame.from_Odometry(args[0])
+                frame = Frame.from_Pose(args[0].pose.pose)
+                # frame.frame_id = args[0].header.frame_id
             self.translation, self.quaternion = frame.translation, frame.quaternion
         elif len(args) == 2: # and isinstance(args[0], Vec3) and isinstance(args[1], Quat):
             self.translation, self.quaternion = args
+        # elif len(args) == 3: # and isinstance(args[0], Vec3) and isinstance(args[1], Quat) and isinstance(args[2], str):
+        #     self.translation, self.quaternion = args
+        #     frame.frame_id = args[2]
         elif len(args) == 7: # and all(isinstance(arg, (float, int)) for arg in args):
             self.translation = Vec3(args[:3])
             self.quaternion = Quat(args[3:])
@@ -260,10 +266,6 @@ class Frame:
             # raise ValueError("Invalid quaternion")
             res.quaternion = Quat(0, 0, 0, 1)
         return res
-    
-    @staticmethod
-    def from_Odometry(msg: Odometry):
-        return Frame.from_Pose(msg.pose.pose)
 
     @staticmethod
     def from_dict(d: dict):
