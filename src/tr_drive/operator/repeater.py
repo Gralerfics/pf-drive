@@ -271,8 +271,11 @@ class Repeater:
         d_ab = self.goal_intervals[i]
         d_cb = t_cb.norm()
         
-        d_p_ac = Vec3.dot(t_ac, t_ab) / d_ab if d_ab > 0.005 else 0.5
-        u = np.clip(d_p_ac / d_ab if d_ab > 0.005 else 0.5, 0.0, 1.0)
+        turning_goal = d_ab < self.params.repeater.distance_threshold
+
+        d_p_ac = Vec3.dot(t_ac, t_ab) / d_ab if not turning_goal else 0.5
+        u = d_p_ac / d_ab if not turning_goal else 0.5
+        # u = np.clip(d_p_ac / d_ab, 0.0, 1.0) if not turning_goal else 0.5
         
         # along-path correction
         scan_indices = list(range(max(0, i - r + 1), min(len(self.recording.odoms), i + r + 1)))
@@ -283,10 +286,15 @@ class Repeater:
         delta_distance = self.params.repeater.k_along_path * delta_p # np.clip((d_cb - delta_distance) / d_cb, scan_distances[0], scan_distances[-1])
         along_path_correction = (d_cb - delta_distance) / d_cb
 
-        if along_path_correction > 1.0: # if delta_distance > self.goal_intervals[i]:
+        if along_path_correction > 1.0: # [理论上这不是到达目标条件, 暂时先如此] 基本无超前或滞后
             self.pass_to_next_goal()
             print('along_path_correction > 1.0')
             return
+        
+        # if u > 1.0 - 1e-3: # 投影点到达下个目标
+        #     self.pass_to_next_goal()
+        #     print('u -> 1.0')
+        #     return
 
         # rotation correction
         theta_a = self.px_to_rad(scan_offsets[r - 1])
@@ -294,7 +302,7 @@ class Repeater:
         delta_theta = (1 - u) * theta_a + u * theta_b
         rotation_correction = self.params.repeater.k_rotation * delta_theta # 由于逆时针才是正方向，故刚好符号对消.
         
-        print(f'rotation_correction: {rotation_correction}; along_path_correction: {along_path_correction}')
+        # print(f'rotation_correction: {rotation_correction}; along_path_correction: {along_path_correction}; u: {u}')
         
         # new estimation of T_0b
         correction_offset = Frame.from_z_rotation(rotation_correction) * T_cb
@@ -303,9 +311,9 @@ class Repeater:
 
         # goal
         delta = T_0c.I * self.T_0b
-        if delta.t.norm() < self.params.repeater.distance_threshold or abs(d_ab) < self.params.repeater.distance_threshold:
+        if delta.t.norm() < self.params.repeater.distance_threshold or turning_goal:
             if abs(delta.q.Euler[2]) < self.params.repeater.angle_threshold:
-                self.pass_to_next_goal()
+                self.pass_to_next_goal() # 里程计反馈到达设定的目标
                 print('in tolerance')
                 return
             else:
@@ -316,6 +324,7 @@ class Repeater:
         biased_odom_frame_id = self.odometry.get_biased_odom_frame_id()
         self.debugger.publish('/a', self.T_0a.to_PoseStamped(frame_id = biased_odom_frame_id))
         self.debugger.publish('/b', self.T_0b.to_PoseStamped(frame_id = biased_odom_frame_id))
+        print(self.T_0b)
         
         self.controller.set_goal(goal_advanced)
 

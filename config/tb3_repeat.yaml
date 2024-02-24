@@ -29,5 +29,5 @@ tr:
         k_rotation: 0.01
         k_along_path: 0.02
         distance_threshold: 0.01
-        angle_threshold: 0.02
+        angle_threshold: 0.04
         goal_advance_distance: 0.15
