@@ -3,7 +3,6 @@
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackground.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/floors/protos/Floor.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/appearances/protos/ThreadMetalPlate.proto"
-EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/factory/manhole/protos/SquareManhole.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/tables/protos/Table.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/appearances/protos/BrushedAluminium.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/chairs/protos/WoodenChair.proto"
@@ -40,8 +39,8 @@ WorldInfo {
 }
 Viewpoint {
   fieldOfView 0.9
-  orientation 0.2784261906154098 0.8871238577642627 -0.3680898224141001 1.4634417673578552
-  position 1.4288636382397493 1.1982710651867161 3.0609937831275382
+  orientation 0.557314214028589 0.5589758409867844 -0.6139599954677935 2.029157343481816
+  position 0.6587016524012801 0.10106355726977218 8.71922975458836
   exposure 1.7
 }
 TexturedBackground {
@@ -53,9 +52,35 @@ Floor {
   appearance ThreadMetalPlate {
   }
 }
-SquareManhole {
-  translation 0.560459 -1.782 -0.03
-  rotation 0 0 1 -1.5707963071795863
+PlasticCrate {
+  translation -1.91 -2.21 -9.809999999998986e-05
+  rotation 0.695062852777045 0.4120485805732666 -0.5891549863465403 2.96329115570606e-18
+  name "plastic crate(6)"
+  size 0.6 0.45 0.4
+  color 0.827451 0.843137 0.811765
+  mass 1
+}
+PlasticCrate {
+  translation -2.5331 -0.93279 -9.809999999998986e-05
+  rotation -1.0014768060530861e-19 -6.45307455390406e-20 1 2.0944
+  name "plastic crate(5)"
+  size 0.6 0.45 0.4
+  color 0.827451 0.843137 0.811765
+  mass 1
+}
+PlasticCrate {
+  translation 4.1648 -1.99794 -9.809999999998986e-05
+  rotation 3.332640569009894e-19 3.171019362370969e-19 1 1.0472
+  name "plastic crate(4)"
+  size 0.6 0.45 0.4
+  mass 1
+}
+WoodenPalletStack {
+  translation 2.94 -2.08 0
+  rotation 0 0 1 -1.5707953071795862
+  name "wooden pallet stack(1)"
+  palletNumber 5
+  palletSize 0.8 1 0.11
 }
 Table {
   translation 3.097723 2.013972 0
@@ -96,7 +121,7 @@ ComputerMouse {
   mass 0
 }
 Table {
-  translation -1.419911 -0.81333 0
+  translation -1.09991 -0.29333 0
   rotation 0 0 1 -1.5707963071795863
   name "table(1)"
   size 1.8 0.7 0.8
@@ -116,18 +141,12 @@ OfficeTelephone {
   enablePhysics FALSE
 }
 PlatformCart {
-  hidden position_0_0 4.3328361407224396e-09
-  hidden position2_0_0 -7.538864637951867e-09
-  hidden position_0_1 4.333355134964853e-09
-  hidden position2_0_1 -7.097772759080393e-09
-  hidden position_0_2 -7.528127454747846e-09
-  hidden position_0_3 -7.088138076483119e-09
-  hidden rotation_2 1 -1.6030004027421131e-09 5.9358424316538566e-09 1.5708
-  hidden rotation_3 1 -1.382195776294151e-09 5.715555988386141e-09 1.5708
-  hidden rotation_4 1 -3.764049901221224e-09 3.764063727373924e-09 1.5708
-  hidden rotation_5 1 -3.5440560201729915e-09 3.5440690382415604e-09 1.5708
-  translation 0.9276448452819358 1.7933057138487836 -0.000751891635924179
-  rotation 0.00016466800660447278 2.1941695220409218e-05 0.9999999862015047 -2.8797932951380156
+  hidden translation_2 -0.308 -0.201 0.04
+  hidden translation_3 -0.308 0.201 0.04
+  hidden translation_4 0.308 -0.201 0.04
+  hidden translation_5 0.308 0.201 0.04
+  translation -2.51745563206105 0.7214419812217756 -0.0007518916359243455
+  rotation -0.0001645038326718925 -0.0001266380065420557 -0.999999978450652 1.8325999764047944
 }
 Radiator {
   translation 0.528902 2.341308 0.33
@@ -141,13 +160,11 @@ WoodenPalletStack {
   palletSize 0.8 1 0.11
 }
 Cabinet {
-  hidden position_6_0 3.203068325977323e-06
-  hidden translation_7 -6.374105968683981e-07 -1.0205447598110595e-12 0
-  hidden rotation_7 0 0 1 3.2030218428787432e-06
-  hidden position_10_0 -1.3615450153991934e-06
-  hidden translation_11 -4.6061067870897956e-07 6.270262087326728e-13 0
-  hidden rotation_11 0 0 -1 2.7229604197743657e-06
-  translation -0.41 2.47 0
+  hidden translation_7 -1.27482111266617e-06 -4.082956195361476e-12 0
+  hidden rotation_7 0 0 1 6.406113008859535e-06
+  hidden translation_11 -9.21221298827602e-07 2.5085211685649256e-12 0
+  hidden rotation_11 0 0 -1 5.446165469934237e-06
+  translation -0.82 2.47 0
   rotation 0 0 1 -1.5707953071795862
   name "cabinet(1)"
   layout [
@@ -162,10 +179,10 @@ Cabinet {
   }
 }
 CardboardBox {
-  translation -1.21 2.18 0.3
+  translation -2.09 2.18 0.3
 }
 CardboardBox {
-  translation -1.198389 2.100678 0.75
+  translation -2.07727 2.26296 0.75
   rotation 0 0 1 2.094395
   name "cardboard box(1)"
   size 0.4 0.6 0.3
@@ -258,11 +275,10 @@ Bolt {
   enablePhysics FALSE
 }
 FireExtinguisher {
-  translation -0.7577098014582283 1.7899999714436499 -0.0011771999999991567
-  rotation 0.0005935857263181919 -0.0007934181533794855 -0.9999995090716891 1.570800489007926
+  translation -0.7577098014582276 1.7899999714436494 -0.0011771999999999894
+  rotation 0.0005935857287389101 -0.0007934181566366033 -0.9999995090716851 1.5708004890079297
 }
 ConveyorBelt {
-  hidden translation_1 0 0 0.29999607600000017
   translation 2.48 -0.83 0
   rotation 0 0 1 3.14159
   size 4.12 0.7 0.4
@@ -276,13 +292,13 @@ ConveyorBelt {
 }
 PlasticCrate {
   translation 0.58 0.42 -9.80999999999621e-05
-  rotation 0.006374322664252299 0.0051260772334274516 -0.9999665451117697 6.213853590597673e-17
+  rotation 0.006337080699116441 -1.4867295766440515e-15 -0.9999799205025134 6.250371370592046e-17
   size 0.6 0.45 0.4
   mass 1
 }
 PlasticCrate {
   translation -0.08000000109294912 -0.8200000021375474 0.3949019000000001
-  rotation -1.6749016260645265e-12 1.920396950345103e-12 1 1.0150715060469354e-06
+  rotation -9.292486794779153e-13 6.376987717276861e-13 1 1.0150715060474976e-06
   name "plastic crate(2)"
   size 0.3 0.44 0.1
   color 0.913725 0.72549 0.431373
@@ -290,7 +306,7 @@ PlasticCrate {
 }
 PlasticCrate {
   translation 0.22214002317223674 -0.8302330070586957 0.39490190000000014
-  rotation -7.174253386543667e-14 1.1494294753655724e-12 1 1.0119937430471078e-06
+  rotation -1.3182769847982985e-12 1.1494314486813924e-12 1 1.0119937430470729e-06
   name "plastic crate(3)"
   size 0.3 0.44 0.1
   color 0.913725 0.72549 0.431373
@@ -298,7 +314,7 @@ PlasticCrate {
 }
 PlasticCrate {
   translation -0.1 0.42 -9.80999999999621e-05
-  rotation 0.3854129564102097 0.2905686050970458 -0.87580062729088 1.6443290601881824e-18
+  rotation 0.3428912392829986 0.17234056344213403 0.9234307381798686 9.241206128855556e-19
   name "plastic crate(1)"
   size 0.6 0.45 0.4
   color 0.827451 0.843137 0.811765
@@ -345,15 +361,8 @@ DEF WALL4 Pose {
   ]
 }
 DEF tb3 TurtleBot3Burger {
-  hidden position_0_0 3.871281882881816e-12
-  hidden position_0_1 1.3068424249004591e-12
-  hidden position_0_2 -0.03814821092223121
-  hidden position2_0_2 -0.07339479695271127
-  hidden position3_0_2 -0.025340803256964688
-  hidden rotation_10 0 -1 0 1.5707959999419316
-  hidden rotation_12 -0.43207279902576057 -0.8579509623830801 -0.27790869451672684 0.08609452896086917
-  translation 1.5000000275053313 0.49999999589949246 -6.211528489642043e-05
-  rotation -0.0021348856872068452 -0.9999976993779326 -0.0002085711981586641 0.0011528035247838951
+  translation 1.5 0.5 0
+  rotation 0 0 1 0
   name "tb3"
   controller "ros"
   controllerArgs [
