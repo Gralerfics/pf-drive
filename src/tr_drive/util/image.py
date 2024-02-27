@@ -29,6 +29,11 @@ class DigitalImage:
         else:
             raise ValueError("Invalid arguments")
     
+    def copy(self):
+        res = DigitalImage(self.width, self.height, self.channel)
+        res.data = self.data.copy()
+        return res
+    
     @staticmethod
     def from_Image(msg: Image):
         img = DigitalImage()
@@ -168,9 +173,15 @@ class ImageProcessor:
         return res.tolist()
     
     @staticmethod
-    def best_match_offset(image, image_ref, range_radius): # r + 1 + r
+    def best_match_offset(image: DigitalImage, image_ref: DigitalImage, range_radius: int): # r + 1 + r
         offset_list = list(range(-range_radius, range_radius + 1))
         values = ImageProcessor.horizontal_NCC(image, image_ref, offset_list)
         idx = np.argmax(values)
         return offset_list[idx], values[idx]
+
+    def draw_line(image: DigitalImage, x0: int, y0: int, x1: int, y1: int, color: list, thickness: int = 1):
+        assert image.channel == len(color)
+        res = image.copy()
+        res.data = cv2.line(res.data, (x0, y0), (x1, y1), color, thickness)
+        return res
 

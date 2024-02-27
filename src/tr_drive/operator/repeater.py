@@ -26,15 +26,20 @@ class Repeater:
         self.ready = threading.Event()
         self.launched = threading.Event()
         self.paused = threading.Event()
+
+        self.new_goal_passed = threading.Event()
         
         # public
         self.recording: Recording = None
         
-        self.passed_goal_index = 0 # the index of the nearest goal that has been passed
         self.passed_goal_index_lock = threading.Lock()
+        self.passed_goal_index = 0 # the index of the nearest goal that has been passed
         
         self.goal_intervals: list[float] = [] # the intervals between goal i and goal i + 1
         self.goal_distances: list[float] = [] # the distances between goal 0 and goal i
+
+        self.passed_goal_image_match_offset: int = 0 # for GUI; 关于线程安全: 对 int 仅赋值和读取在 Python 这里似乎是原子的.
+        self.next_goal_image_match_offset: int = 0 # 同上
 
         # P.S. 命名上 T 代表 Transfrom, 0 为 biased_odom 原点, a 为刚经过的目标, b 为下一个目标, c 为当前 biased_odom.
         self.T_0a: Frame = None # 故 frame_id 为 'biased_odom'
@@ -208,7 +213,7 @@ class Repeater:
         values = np.zeros(len(indices))
         for i, idx in enumerate(indices):
             offsets[i], values[i] = ImageProcessor.best_match_offset(image, self.recording.processed_images[idx], self.params.repeater.match_offset_radius)
-        return offsets, values
+        return offsets.astype(int), values
 
     def px_to_rad(self, px: int):
         return px / self.params.camera.resize[0] * self.params.camera.horizontal_fov / 180 * np.pi
@@ -222,6 +227,7 @@ class Repeater:
 
     def pass_to_next_goal(self):
         self.inc_passed_goal_index()
+        self.new_goal_passed.set()
         
         i = self.get_passed_goal_index()
         n = len(self.recording.odoms)
@@ -268,75 +274,104 @@ class Repeater:
         t_ac = t_0c - t_0a
         t_cb = T_cb.t
 
-        d_ab = self.goal_intervals[i]
+        d_ab = t_ab.norm() # self.goal_intervals[i]
         d_cb = t_cb.norm()
         
         turning_goal = d_ab < self.params.repeater.distance_threshold
+        if not turning_goal:
+            d_p_ac = Vec3.dot(t_ac, t_ab) / d_ab # if not turning_goal else 0.0
+            u = d_p_ac / d_ab if not turning_goal else 0.0 # 0.5
+            # u = np.clip(d_p_ac / d_ab, 0.0, 1.0) # if not turning_goal else 0.0 # 0.5
+            
+            # along-path correction
+            scan_indices = list(range(max(0, i - r + 1), min(len(self.recording.odoms), i + r + 1)))
+            scan_distances = np.array([self.goal_distances[idx] for idx in scan_indices]) - self.goal_distances[i] - d_p_ac # c 处为 0
+            scan_offsets, scan_values = self.batched_match(self.camera.get_processed_image(), scan_indices)
+            scan_values[scan_values < 0.1] = 0 # TODO, threshold
+            delta_p = scan_values / scan_values.sum() @ scan_distances
+            delta_distance = self.params.repeater.k_along_path * delta_p # np.clip((d_cb - delta_distance) / d_cb, scan_distances[0], scan_distances[-1])
+            along_path_correction = (d_cb - delta_distance) / d_cb
 
-        d_p_ac = Vec3.dot(t_ac, t_ab) / d_ab if not turning_goal else 0.5
-        u = d_p_ac / d_ab if not turning_goal else 0.5
-        # u = np.clip(d_p_ac / d_ab, 0.0, 1.0) if not turning_goal else 0.5
-        
-        # along-path correction
-        scan_indices = list(range(max(0, i - r + 1), min(len(self.recording.odoms), i + r + 1)))
-        scan_distances = np.array([self.goal_distances[idx] for idx in scan_indices]) - self.goal_distances[i] - d_p_ac # c 处为 0
-        scan_offsets, scan_values = self.batched_match(self.camera.get_processed_image(), scan_indices)
-        scan_values[scan_values < 0.1] = 0 # TODO, threshold
-        delta_p = scan_values / scan_values.sum() @ scan_distances
-        delta_distance = self.params.repeater.k_along_path * delta_p # np.clip((d_cb - delta_distance) / d_cb, scan_distances[0], scan_distances[-1])
-        along_path_correction = (d_cb - delta_distance) / d_cb
+            # if along_path_correction > 1.0: # [理论上这不是到达目标条件, 暂时先如此] delta_distance 为负, 说明已经超过估计
+            #     self.pass_to_next_goal()
+            #     print('along_path_correction > 1.0')
+            #     return
 
-        if along_path_correction > 1.0: # [理论上这不是到达目标条件, 暂时先如此] 基本无超前或滞后
-            self.pass_to_next_goal()
-            # print('along_path_correction > 1.0')
-            return
+            if u > 1.0 - 1e-2: # 投影点到达下个目标
+                self.pass_to_next_goal()
+                print('u -> 1.0')
+                return
 
-        # if u > 1.0 - 1e-3: # 投影点到达下个目标
-        #     self.pass_to_next_goal()
-        #     print('u -> 1.0')
-        #     return
+            # rotation correction
+            theta_a = self.px_to_rad(scan_offsets[r - 1])
+            theta_b = self.px_to_rad(scan_offsets[r])
+            delta_theta = (1 - u) * theta_a + u * theta_b
+            rotation_correction = self.params.repeater.k_rotation * delta_theta # 由于逆时针才是正方向，故刚好符号对消.
 
-        # rotation correction
-        theta_a = self.px_to_rad(scan_offsets[r - 1])
-        theta_b = self.px_to_rad(scan_offsets[r])
-        delta_theta = (1 - u) * theta_a + u * theta_b
-        rotation_correction = self.params.repeater.k_rotation * delta_theta # 由于逆时针才是正方向，故刚好符号对消.
-        
-        # print(f'rotation_correction: {rotation_correction}; along_path_correction: {along_path_correction}; u: {u}')
-        
+            self.passed_goal_image_match_offset = scan_offsets[r - 1] # for GUI
+            self.next_goal_image_match_offset = scan_offsets[r] # 同上
+
+            print(f'rot_c: {rotation_correction}; ap_c: {along_path_correction}; u: {u}; delta_d: {delta_distance}; d_ab/2: {d_ab / 2}\n')
+        else:
+            along_path_correction = 1.0 # ?
+            rotation_correction = 0.0
+
+            print(f'rot_c: {rotation_correction}; ap_c: {along_path_correction}\n')
+
         # new estimation of T_0b
-        correction_offset = Frame.from_z_rotation(rotation_correction) * T_cb
-        correction_offset.translation *= along_path_correction
-        self.T_0b = T_0c * correction_offset
+        if not turning_goal: # TODO ?
+            correction_offset = Frame.from_z_rotation(rotation_correction) * T_cb
+            correction_offset.translation *= along_path_correction
+            self.T_0b = T_0c * correction_offset
 
         # goal
-        delta = T_0c.I * self.T_0b
-        if delta.t.norm() < self.params.repeater.distance_threshold or turning_goal:
-            if abs(delta.q.Euler[2]) < self.params.repeater.angle_threshold:
-                self.pass_to_next_goal() # 里程计反馈到达设定的目标
-                # print('in tolerance')
-                return
+        if not self.new_goal_passed.is_set():
+            delta = T_0c.I * self.T_0b
+            if delta.t.norm() < self.params.repeater.distance_threshold or turning_goal:
+                if abs(delta.q.Euler[2]) < self.params.repeater.angle_threshold:
+                    self.pass_to_next_goal() # 里程计反馈到达设定的目标
+                    print('in tolerance')
+                    return
+                else:
+                    goal_advanced = self.T_0b
             else:
-                goal_advanced = self.T_0b
+                goal_advanced = self.T_0b * Frame.from_translation(Vec3(self.params.repeater.goal_advance_distance, 0, 0))
+            
+            biased_odom_frame_id = self.odometry.get_biased_odom_frame_id()
+            self.debugger.publish('/a', self.T_0a.to_PoseStamped(frame_id = biased_odom_frame_id))
+            self.debugger.publish('/b', self.T_0b.to_PoseStamped(frame_id = biased_odom_frame_id))
+            self.debugger.publish('/r', self.odometry.get_biased_odom().to_PoseStamped(frame_id = biased_odom_frame_id))
+
+            aligned_map_frame_id = self.global_locator.get_aligned_global_frame_id()
+            self.debugger.publish('/a_gt', self.recording.ground_truths[i].to_PoseStamped(frame_id = aligned_map_frame_id))
+            if i < len(self.recording.ground_truths) - 1:
+                self.debugger.publish('/b_gt', self.recording.ground_truths[i + 1].to_PoseStamped(frame_id = aligned_map_frame_id))
+            
+            self.controller.set_goal(goal_advanced)
         else:
-            goal_advanced = self.T_0b * Frame.from_translation(Vec3(self.params.repeater.goal_advance_distance, 0, 0))
-        
-        biased_odom_frame_id = self.odometry.get_biased_odom_frame_id()
-        self.debugger.publish('/a', self.T_0a.to_PoseStamped(frame_id = biased_odom_frame_id))
-        self.debugger.publish('/b', self.T_0b.to_PoseStamped(frame_id = biased_odom_frame_id))
-        
-        self.controller.set_goal(goal_advanced)
+            self.new_goal_passed.clear()
 
 
 """ TODO ideas
+录制:
+    添加即时读写模式, 减轻内存负担.
+        (若无将所有 raw_image 读入的情况, 占用内存实际上可以接受, e.g. 150x50 grayscale 2000 张约占 15 MB; 但录制过程中会出现所有 raw_image 在内存中的情况)
+    添加重复路线的记录, 用于比对.
 控制器:
-    [important] 修改 goal_controller, 减少目标平移对旋转指令的即时影响; 或许也可以增大 advance distance?
-算法：
+    [important] 修改 goal_controller, 减少目标平移对旋转指令的即时影响; 或许也可以增大 advance distance; 或许也有 rotation offset 估计跳变的原因.
+算法:
+    切换目标后的第一次估计暂时不发布为 goal; (没有完全解决问题)
+    记录累积转向, 在大趋势上提前补偿;
+    长时间停留 -> pass_to_next_goal (?);
     金字塔匹配辅助确认距离;
     互相关加权, 倾向小角度;
     角度校正跳变处理 (例如跨度过大则找其他尖峰等);
-    controller 限速和 goal 间距的关系 (低限速则拐大弯, 插值更平滑, 可能可适用于更大 goal 间距);
-    多种计算 0~u~1 的方式融合
+    controller 限速和 goal 间距的关系 (低限速则拐大弯, 插值更平滑, 可能可适用于更大 goal 间距)
+问题:
+    goal_index 累计后太过超前.
+        删去 along_path_correction > 1.0 条件, 恢复 u > 1.0 - eps 条件, 差距有所减小.
+        ** 提高 k_rotation from 0.01 to 0.04, 大幅贴近路线, test_3 跑通; 后期还有一定 goal_index 超前, 但程度很小.
+            k_along_path 也有待斟酌; 调参可视化 (?), 录制直线用于测试, 单步运算可视化等.
 """
 
 # if self.first_image is None:

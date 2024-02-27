@@ -105,7 +105,7 @@ class Recording:
                 if filename.endswith('.jpg'):
                     img_cv2 = cv2.imread(raw_image_folder + '/' + filename, cv2.IMREAD_COLOR)
                     img = DigitalImage(img_cv2)
-                    recording.raw_images.append(img)
+                    # recording.raw_images.append(img) # 顺次读取用完即可丢弃, 因为不用再存一遍.
                     
                     processed_img = ImageProcessor.kernel_normalize(img.interpolate(*resize).grayscale(), patch_size)
                     recording.processed_images.append(processed_img)

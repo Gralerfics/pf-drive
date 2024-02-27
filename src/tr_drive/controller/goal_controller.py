@@ -186,11 +186,11 @@ class GoalController:
             v, omega = self.scale_velocities(v, omega)
             
             if rho < self.translation_tolerance and abs(self.warp_to_pi(goal_theta - odom_theta)) < self.rotation_tolerance:
-                self.set_goal(None)
+                # self.set_goal(None)
                 for hook in self.goal_reached_hooks:
                     hook()
-                v = 0
-                omega = 0
+                # v = 0
+                # omega = 0
             
             cmd = Twist()
             cmd.linear.x = v
