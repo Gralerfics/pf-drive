@@ -294,12 +294,12 @@ class Repeater:
 
             # if along_path_correction > 1.0: # [理论上这不是到达目标条件, 暂时先如此] delta_distance 为负, 说明已经超过估计
             #     self.pass_to_next_goal()
-            #     print('along_path_correction > 1.0')
+            #     # print('along_path_correction > 1.0')
             #     return
 
             if u > 1.0 - 1e-2: # 投影点到达下个目标
                 self.pass_to_next_goal()
-                print('u -> 1.0')
+                # print('u -> 1.0')
                 return
 
             # rotation correction
@@ -311,12 +311,12 @@ class Repeater:
             self.passed_goal_image_match_offset = scan_offsets[r - 1] # for GUI
             self.next_goal_image_match_offset = scan_offsets[r] # 同上
 
-            print(f'rot_c: {rotation_correction}; ap_c: {along_path_correction}; u: {u}; delta_d: {delta_distance}; d_ab/2: {d_ab / 2}\n')
+            # print(f'rot_c: {rotation_correction}; ap_c: {along_path_correction}; u: {u}; delta_d: {delta_distance}; d_ab/2: {d_ab / 2}\n')
         else:
             along_path_correction = 1.0 # ?
             rotation_correction = 0.0
 
-            print(f'rot_c: {rotation_correction}; ap_c: {along_path_correction}\n')
+            # print(f'rot_c: {rotation_correction}; ap_c: {along_path_correction}\n')
 
         # new estimation of T_0b
         if not turning_goal: # TODO ?
@@ -330,7 +330,7 @@ class Repeater:
             if delta.t.norm() < self.params.repeater.distance_threshold or turning_goal:
                 if abs(delta.q.Euler[2]) < self.params.repeater.angle_threshold:
                     self.pass_to_next_goal() # 里程计反馈到达设定的目标
-                    print('in tolerance')
+                    # print('in tolerance')
                     return
                 else:
                     goal_advanced = self.T_0b

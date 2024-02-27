@@ -219,8 +219,11 @@ class GlobalLocator:
             time.sleep(0.2)
         rospy.loginfo('Global locator is ready.')
     
-    def align_frame(self, odom_frame: Frame, global_frame: Frame): # odom_frame -> T_odom_p, global_frame -> T_map_p
-        # 计算 alignment, 令 map 下的 global_frame 在左乘 alignment 后与 odom 下的 odom_frame 重合.
+    def align_frame(self, odom_frame: Frame, global_frame: Frame): # TODO: global_locator 中应该专注 global, 设计上不便涉及 odom? 或者这里设计为一个工具函数, 体现在名称或类型中?
+        # 目的: 计算 alignment, 令 map 下的 global_frame 在左乘 alignment 后与 odom 下的 odom_frame 重合.
+            # T_am_p 也即这里的 global_frame 应当是 frame_id = aligned_map 的; T_odom_p 也即这里的 odom_frame 应当是 frame_id = odom 的.
+            # 有等式 T_map_am * T_am(i.e. aligned_map)_p = T_map_odom * T_odom_p;
+            # 故 alignment = T_map_am = Inv(T_am_p) * T_map_odom * T_odom_p = Inv(global_frame) * T_map_odom * odom_frame.
         T_map_odom = self.get_map_to_odom_frame()
         with self.alignment_lock:
             self.alignment = global_frame.I * T_map_odom * odom_frame
