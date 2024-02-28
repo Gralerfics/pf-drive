@@ -1,3 +1,5 @@
+import os
+
 from geometry_msgs.msg import Pose, PoseStamped, PoseWithCovariance, PoseWithCovarianceStamped
 from nav_msgs.msg import Odometry, Path
 
@@ -53,4 +55,16 @@ def type_from_str(type: str):
         return Path
     else:
         raise ValueError('Unsupported type string')
+
+
+def get_filename_number(filename):
+    try:
+        res = int((filename + '.').split('.')[0])
+    except ValueError:
+        res = -1
+    return res
+
+
+def get_sorted_file_list(folder: str):
+    return sorted(os.listdir(folder), key = lambda x: get_filename_number(x))
 

@@ -135,7 +135,7 @@ class Recording:
             raw_image_folder = path + self.params['folders']['raw_image']
             os.makedirs(raw_image_folder, exist_ok = True)
             for i, img in enumerate(self.raw_images):
-                img.to_jpg(raw_image_folder + '/' + str(i) + '.jpg')
+                img.to_file(raw_image_folder + '/' + str(i) + '.jpg')
         
         # save processed images
         if len(self.processed_images) < 0:
@@ -143,7 +143,7 @@ class Recording:
         processed_image_folder = path + self.params['folders']['processed_image']
         os.makedirs(processed_image_folder, exist_ok = True)
         for i, img in enumerate(self.processed_images):
-            img.to_jpg(processed_image_folder + '/' + str(i) + '.jpg')
+            img.to_file(processed_image_folder + '/' + str(i) + '.jpg')
         
         # save odometry
         if len(self.odoms) < 0:

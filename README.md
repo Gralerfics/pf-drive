@@ -72,7 +72,7 @@ roslaunch tr_drive tb3_repeat.launch path:="..."
 `src/tr_drive/sensor`：包括 `Camera` 和 `Odom`。前者订阅摄像头图像并进行降采样、
 patch normalization 处理，后者订阅里程计 Odometry 数据，转为 Frame 并减掉设定的 bias（置零操作）。
 
-`src/tr_drive/util`：工具类。`conversion.py` 中定义了 `Vec3`、`Quat`、`Frame` 等空间运算类，并提供与 ROS 消息间的转换，统一类型操作；`debug.py` 中定义了统一的 publisher 管理器，用于简便地发布调试消息（用 rviz 查看），按约定每个组件类中都会定义一个 `self.debugger`；`image.py` 中提供了统一的 `DigitialImage` 图像类，和本项目需要用到的一些图像处理方法；`namespace.py` 仅提供一个递归定义的、用于字典转对象结构的类。
+`src/tr_drive/util`：工具类。`geometry.py` 中定义了 `Vec3`、`Quat`、`Frame` 等空间运算类，并提供与 ROS 消息间的转换，统一类型操作；`debug.py` 中定义了统一的 publisher 管理器，用于简便地发布调试消息（用 rviz 查看），按约定每个组件类中都会定义一个 `self.debugger`；`image.py` 中提供了统一的 `DigitialImage` 图像类，和本项目需要用到的一些图像处理方法；`namespace.py` 仅提供一个递归定义的、用于字典转对象结构的类。
 
 ---
 

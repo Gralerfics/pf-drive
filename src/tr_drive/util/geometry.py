@@ -6,6 +6,8 @@ import numpy as np
 from geometry_msgs.msg import Pose, PoseStamped, PoseWithCovariance, PoseWithCovarianceStamped
 from nav_msgs.msg import Odometry, Path
 
+from tr_drive.util.namespace import get_sorted_file_list
+
 
 class Vec3:
     def __init__(self, *args):
@@ -384,11 +386,9 @@ class FrameList:
         if not os.path.exists(folder_path):
             raise FileNotFoundError("Folder not found.")
         frames = []
-        for filename in sorted(os.listdir(folder_path)):
+        for filename in get_sorted_file_list(folder_path):
             if FrameList.is_filename_valid(filename):
-                with open(folder_path + '/' + filename, 'r') as f:
-                    d = json.load(f)
-                frames.append(Frame.from_dict(d))
+                frames.append(Frame.from_file(folder_path + '/' + filename))
         return FrameList(frames)
     
     def to_file(self, folder_path: str): # 整体写到文件.
@@ -415,8 +415,16 @@ class FrameList:
         if clear_memory_data:
             self.data.clear()
     
-    def unbind_folder(self, load_data: bool = True):
-        if load_data:
-            self.data = FrameList.from_file(self.bound_folder).data
-        self.bound_folder = None
+    # def unbind_folder(self, load_data: bool = True):
+    #     if load_data:
+    #         self.data = FrameList.from_file(self.bound_folder).data
+    #     self.bound_folder = None
+
+    def clear(self):
+        if self.is_folder_bound():
+            for filename in os.listdir(self.bound_folder):
+                if FrameList.is_filename_valid(filename):
+                    os.remove(self.bound_folder + '/' + filename)
+        else:
+            self.data.clear()
 

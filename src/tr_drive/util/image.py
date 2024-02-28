@@ -1,7 +1,11 @@
+import os
+
 import numpy as np
 import cv2
 
 from sensor_msgs.msg import Image
+
+from tr_drive.util.namespace import get_sorted_file_list
 
 
 class DigitalImage:
@@ -65,6 +69,11 @@ class DigitalImage:
             raise ValueError("Unsupported encoding")
         return img
     
+    @staticmethod
+    def from_file(file_path: str):
+        data = cv2.imread(file_path, cv2.IMREAD_UNCHANGED)
+        return DigitalImage(data)
+    
     def to_Image(self, encoding = 'rgb8'):
         msg = Image()
         msg.width = self.width
@@ -99,14 +108,14 @@ class DigitalImage:
             raise ValueError("Unsupported channel")
         return (data.reshape(-1).astype(float) / 255).tolist()
     
-    def to_jpg(self, path):
+    def to_file(self, file_path: str): # jpeg
         if self.channel == 1:
-            cv2.imwrite(path, self.data)
+            cv2.imwrite(file_path, self.data)
         elif self.channel == 3:
             # cv2.imwrite(path, self.data)
             pass # TODO
         elif self.channel == 4:
-            cv2.imwrite(path, self.data[:, :, [2, 1, 0, 3]])
+            cv2.imwrite(file_path, self.data[:, :, [2, 1, 0, 3]])
         else:
             raise ValueError("Unsupported channel")
     
@@ -125,11 +134,82 @@ class DigitalImage:
 
 
 class DigitalImageList:
-    # 不绑定目录则使用内存存储, 绑定目录则使用文件存储.
-    def __init__(self):
-        pass
+    # Python 貌似无类似模板类的东西, 暂且写两遍类似的东西, 注释见 geometry 中的 FrameList.
+    def __init__(self, frames: list = [], bound_folder = None):
+        assert all(isinstance(frame, DigitalImage) for frame in frames)
+        
+        self.data = list(frames)
+        self.bound_folder = bound_folder
+    
+    def __getitem__(self, index):
+        assert isinstance(index, int)
+        if self.is_folder_bound():
+            return DigitalImage.from_file(self.bound_folder + '/' + str(index) + '.jpg')
+        else:
+            return self.data[index]
 
+    def __setitem__(self, index, value):
+        assert isinstance(index, int) and isinstance(value, DigitalImage)
+        if self.is_folder_bound():
+            value.to_file(self.bound_folder + '/' + str(index) + '.jpg')
+        else:
+            self.data[index] = value
 
+    def __len__(self):
+        if self.is_folder_bound():
+            return sum([1 for filename in os.listdir(self.bound_folder) if DigitalImageList.is_filename_valid(filename)])
+        else:
+            return len(self.data)
+    
+    def append(self, frame: DigitalImage):
+        if self.is_folder_bound():
+            self.__setitem__(len(self), frame)
+        else:
+            self.data.append(frame)
+
+    def copy(self):
+        return DigitalImageList([frame.copy() for frame in self.data])
+    
+    @staticmethod
+    def is_filename_valid(self, filename: str):
+        return filename.endswith('.jpg') # TODO
+    
+    @staticmethod
+    def from_file(folder_path: str):
+        if not os.path.exists(folder_path):
+            raise FileNotFoundError("Folder not found.")
+        frames = []
+        for filename in get_sorted_file_list(folder_path):
+            if DigitalImageList.is_filename_valid(filename):
+                frames.append(DigitalImage.from_file(folder_path + '/' + filename))
+        return DigitalImageList(frames)
+    
+    def to_file(self, folder_path: str):
+        os.makedirs(folder_path, exist_ok = True)
+        for i, frame in enumerate(self.data):
+            frame.to_file(folder_path + '/' + str(i) + '.jpg')
+        self.bind_folder(folder_path)
+
+    def is_folder_bound(self):
+        return self.bound_folder is not None
+    
+    def bind_folder(self, folder_path: str, clear_memory_data: bool = True):
+        self.bound_folder = folder_path
+        if clear_memory_data:
+            self.data.clear()
+    
+    # def unbind_folder(self, load_data: bool = True):
+    #     if load_data:
+    #         self.data = DigitalImageList.from_file(self.bound_folder).data
+    #     self.bound_folder = None
+
+    def clear(self):
+        if self.is_folder_bound():
+            for filename in os.listdir(self.bound_folder):
+                if DigitalImageList.is_filename_valid(filename):
+                    os.remove(self.bound_folder + '/' + filename)
+        else:
+            self.data.clear()
 
 
 class ImageProcessor:
