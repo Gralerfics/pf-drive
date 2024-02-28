@@ -25,7 +25,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: LaserScan
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -62,11 +62,7 @@ Visualization Manager:
           Value: false
         accelerometer:
           Value: false
-        aligned_map:
-          Value: false
         base_link:
-          Value: false
-        biased_odom:
           Value: false
         camera:
           Value: false
@@ -74,8 +70,6 @@ Visualization Manager:
           Value: false
         gyro:
           Value: false
-        map:
-          Value: true
         odom:
           Value: false
         screw0:
@@ -97,33 +91,28 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        map:
-          aligned_map:
-            {}
-          odom:
-            base_link:
-              LDS-01:
-                screw0:
-                  {}
-                screw1:
-                  {}
-                screw2:
-                  {}
-                screw3:
-                  {}
-                tb3/LDS_01:
-                  {}
-              accelerometer:
+        odom:
+          base_link:
+            LDS-01:
+              screw0:
                 {}
-              compass:
+              screw1:
                 {}
-              gyro:
+              screw2:
                 {}
-              solid_0:
-                camera:
-                  {}
-            biased_odom:
+              screw3:
+                {}
+              tb3/LDS_01:
+                {}
+            accelerometer:
               {}
+            compass:
+              {}
+            gyro:
+              {}
+            solid_0:
+              camera:
+                {}
       Update Interval: 0
       Value: true
     - Alpha: 0.699999988079071
@@ -182,7 +171,7 @@ Visualization Manager:
           Value: true
         Value: false
       Enabled: false
-      Keep: 500
+      Keep: 1000
       Name: Odometry
       Position Tolerance: 0.05999999865889549
       Queue Size: 10
@@ -231,7 +220,7 @@ Visualization Manager:
       Buffer Length: 1
       Class: rviz/Path
       Color: 206; 92; 0
-      Enabled: true
+      Enabled: false
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
       Length: 0.30000001192092896
@@ -250,7 +239,7 @@ Visualization Manager:
       Shaft Length: 0.10000000149011612
       Topic: /recorded_odoms
       Unreliable: false
-      Value: true
+      Value: false
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
@@ -280,7 +269,7 @@ Visualization Manager:
       Axes Radius: 0.00800000037997961
       Class: rviz/Pose
       Color: 255; 25; 0
-      Enabled: false
+      Enabled: true
       Head Length: 0.30000001192092896
       Head Radius: 0.10000000149011612
       Name: A
@@ -290,13 +279,13 @@ Visualization Manager:
       Shape: Axes
       Topic: /a
       Unreliable: false
-      Value: false
+      Value: true
     - Alpha: 1
       Axes Length: 0.05000000074505806
       Axes Radius: 0.00800000037997961
       Class: rviz/Pose
       Color: 255; 25; 0
-      Enabled: false
+      Enabled: true
       Head Length: 0.30000001192092896
       Head Radius: 0.10000000149011612
       Name: B
@@ -306,7 +295,7 @@ Visualization Manager:
       Shape: Axes
       Topic: /b
       Unreliable: false
-      Value: false
+      Value: true
     - Alpha: 1
       Axes Length: 0.10000000149011612
       Axes Radius: 0.00800000037997961
@@ -383,7 +372,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 2.900467872619629
+      Distance: 5.481232643127441
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -399,7 +388,7 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.1747968196868896
+      Pitch: 1.214796781539917
       Target Frame: <Fixed Frame>
       Yaw: 1.7285830974578857
     Saved: ~
@@ -421,5 +410,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1917
-  X: 1903
-  Y: 327
+  X: 1819
+  Y: 321

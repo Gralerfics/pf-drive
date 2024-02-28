@@ -357,6 +357,8 @@ class Repeater:
     添加即时读写模式, 减轻内存负担.
         (若无将所有 raw_image 读入的情况, 占用内存实际上可以接受, e.g. 150x50 grayscale 2000 张约占 15 MB; 但录制过程中会出现所有 raw_image 在内存中的情况)
     添加重复路线的记录, 用于比对.
+        要不拆分类型, 坐标序列和图像序列分别编写读写控制, 不再被绑定到 Recording 类.
+            因为就这两种类型, 并且一个 Recording 中 odom 和 ground_truths, 以及两种 image 的处理都有一定重复性, 再考虑到 repeating 也要输出路径真值用以比对.
 控制器:
     [important] 修改 goal_controller, 减少目标平移对旋转指令的即时影响; 或许也可以增大 advance distance; 或许也有 rotation offset 估计跳变的原因.
 算法:
