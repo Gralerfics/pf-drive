@@ -1,3 +1,7 @@
+from geometry_msgs.msg import Pose, PoseStamped, PoseWithCovariance, PoseWithCovarianceStamped
+from nav_msgs.msg import Odometry, Path
+
+
 class DictRegulator:
     def __init__(self, d):
         for key, value in d.items():
@@ -32,4 +36,21 @@ def recursive_dict_update(d: dict, u: dict):
         else:
             d[k] = v
     return d
+
+
+def type_from_str(type: str):
+    if type == 'Pose':
+        return Pose
+    elif type == 'PoseStamped':
+        return PoseStamped
+    elif type == 'PoseWithCovariance':
+        return PoseWithCovariance
+    elif type == 'PoseWithCovarianceStamped':
+        return PoseWithCovarianceStamped
+    elif type == 'Odometry':
+        return Odometry
+    elif type == 'Path':
+        return Path
+    else:
+        raise ValueError('Unsupported type string')
 

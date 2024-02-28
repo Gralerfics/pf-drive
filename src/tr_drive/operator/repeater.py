@@ -6,8 +6,8 @@ import rospy
 import numpy as np
 
 from tr_drive.util.debug import Debugger
-from tr_drive.util.namespace import DictRegulator
-from tr_drive.util.conversion import Vec3, Frame, type_from_str
+from tr_drive.util.namespace import DictRegulator, type_from_str
+from tr_drive.util.geometry import Vec3, Frame, FrameList
 from tr_drive.util.image import ImageProcessor
 
 from tr_drive.sensor.odometry import Odom
@@ -126,7 +126,7 @@ class Repeater:
     
     def load_recording(self):
         # load recording
-        self.recording = Recording.from_path(self.params.persistent.recording_path)
+        self.recording = Recording.from_file(self.params.persistent.recording_path)
         
         # initialize goal intervals and distances
         self.goal_distances.append(0.0)
@@ -183,11 +183,11 @@ class Repeater:
         
         # 发布路径
         biased_odom_frame_id = self.odometry.get_biased_odom_frame_id()
-        self.debugger.publish('/recorded_odoms', Frame.to_path(self.recording.odoms, frame_id = biased_odom_frame_id))
+        self.debugger.publish('/recorded_odoms', FrameList(self.recording.odoms).to_Path(frame_id = biased_odom_frame_id))
         if self.global_locator_used:
             aligned_global_frame_id = self.global_locator.get_aligned_global_frame_id()
             if aligned_global_frame_id is not None:
-                self.debugger.publish('/recorded_gts', Frame.to_path(self.recording.ground_truths, frame_id = aligned_global_frame_id))
+                self.debugger.publish('/recorded_gts', FrameList(self.recording.ground_truths).to_Path(frame_id = aligned_global_frame_id))
         
         self.launched.set()
         return True
@@ -361,6 +361,8 @@ class Repeater:
             因为就这两种类型, 并且一个 Recording 中 odom 和 ground_truths, 以及两种 image 的处理都有一定重复性, 再考虑到 repeating 也要输出路径真值用以比对.
 控制器:
     [important] 修改 goal_controller, 减少目标平移对旋转指令的即时影响; 或许也可以增大 advance distance; 或许也有 rotation offset 估计跳变的原因.
+图形界面:
+    封装一下?
 算法:
     切换目标后的第一次估计暂时不发布为 goal; (没有完全解决问题)
     记录累积转向, 在大趋势上提前补偿;
@@ -374,6 +376,8 @@ class Repeater:
         删去 along_path_correction > 1.0 条件, 恢复 u > 1.0 - eps 条件, 差距有所减小.
         ** 提高 k_rotation from 0.01 to 0.04, 大幅贴近路线, test_3 跑通; 后期还有一定 goal_index 超前, 但程度很小.
             k_along_path 也有待斟酌; 调参可视化 (?), 录制直线用于测试, 单步运算可视化等.
+    帧率一高, 调节 k 虽然可以使路径更贴合, 但过程中左右摆动明显.
+        把 P 改成 PD 或 PID (?)
 """
 
 # if self.first_image is None:

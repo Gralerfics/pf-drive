@@ -1,3 +1,6 @@
+import os
+import json
+
 import numpy as np
 
 from geometry_msgs.msg import Pose, PoseStamped, PoseWithCovariance, PoseWithCovarianceStamped
@@ -278,13 +281,12 @@ class Frame:
     @staticmethod
     def from_z_rotation(theta: float):
         return Frame(Vec3(), Quat([0, 0, np.sin(theta / 2), np.cos(theta / 2)]))
-    
+
     @staticmethod
-    def to_path(frames: list, frame_id = ''):
-        msg = Path()
-        msg.header.frame_id = frame_id
-        msg.poses = [frame.to_PoseStamped(frame_id) for frame in frames]
-        return msg
+    def from_file(file_path: str):
+        with open(file_path, 'r') as f:
+            d = json.load(f)
+        return Frame.from_dict(d)
     
     def to_Pose(self):
         msg = Pose()
@@ -310,6 +312,10 @@ class Frame:
             'translation': self.translation.to_list(),
             'quaternion': self.quaternion.to_list()
         }
+
+    def to_file(self, file_path: str):
+        with open(file_path, 'w') as f:
+            json.dump(self.to_dict(), f)
     
     def inverse(self):
         q_inv = self.quaternion.I
@@ -330,19 +336,87 @@ class Frame:
         return (other.I * self).translation.norm()
 
 
-def type_from_str(type: str):
-    if type == 'Pose':
-        return Pose
-    elif type == 'PoseStamped':
-        return PoseStamped
-    elif type == 'PoseWithCovariance':
-        return PoseWithCovariance
-    elif type == 'PoseWithCovarianceStamped':
-        return PoseWithCovarianceStamped
-    elif type == 'Odometry':
-        return Odometry
-    elif type == 'Path':
-        return Path
-    else:
-        raise ValueError('Unsupported type string')
+class FrameList:
+    # 不绑定目录则使用内存存储, 绑定目录则使用文件存储.
+    # 绑定后, __getitem__ / __setitem__ / append 操作会同步到文件系统, self.data 失效.
+    # 不选择继承 list, 以避免需要重载 list 其他方法.
+    def __init__(self, frames: list = [], bound_folder = None):
+        assert all(isinstance(frame, Frame) for frame in frames)
+        
+        self.data = list(frames)
+        self.bound_folder = bound_folder
+    
+    def __getitem__(self, index):
+        assert isinstance(index, int)
+        if self.is_folder_bound():
+            return Frame.from_file(self.bound_folder + '/' + str(index) + '.json')
+        else:
+            return self.data[index]
+
+    def __setitem__(self, index, value):
+        assert isinstance(index, int) and isinstance(value, Frame)
+        if self.is_folder_bound():
+            value.to_file(self.bound_folder + '/' + str(index) + '.json')
+        else:
+            self.data[index] = value
+
+    def __len__(self):
+        if self.is_folder_bound():
+            return sum([1 for filename in os.listdir(self.bound_folder) if FrameList.is_filename_valid(filename)])
+        else:
+            return len(self.data)
+    
+    def append(self, frame: Frame):
+        if self.is_folder_bound():
+            self.__setitem__(len(self), frame)
+        else:
+            self.data.append(frame)
+
+    def copy(self):
+        return FrameList([frame.copy() for frame in self.data])
+    
+    @staticmethod
+    def is_filename_valid(self, filename: str):
+        return filename.endswith('.json') # TODO
+    
+    @staticmethod
+    def from_file(folder_path: str): # 整体从文件读取到 self.data; 不会同时绑定目录, 因为绑定目录后 self.data 不会被使用.
+        if not os.path.exists(folder_path):
+            raise FileNotFoundError("Folder not found.")
+        frames = []
+        for filename in sorted(os.listdir(folder_path)):
+            if FrameList.is_filename_valid(filename):
+                with open(folder_path + '/' + filename, 'r') as f:
+                    d = json.load(f)
+                frames.append(Frame.from_dict(d))
+        return FrameList(frames)
+    
+    def to_file(self, folder_path: str): # 整体写到文件.
+        os.makedirs(folder_path, exist_ok = True)
+        for i, frame in enumerate(self.data):
+            frame.to_file(folder_path + '/' + str(i) + '.json')
+        self.bind_folder(folder_path)
+    
+    def to_Path(self, frame_id = ''):
+        msg = Path()
+        msg.header.frame_id = frame_id
+        if self.is_folder_bound():
+            for i in len(self):
+                msg.poses.append(Frame.from_file(self.bound_folder + '/' + str(i) + '.json').to_PoseStamped(frame_id))
+        else:
+            msg.poses = [frame.to_PoseStamped(frame_id) for frame in self.data]
+        return msg
+
+    def is_folder_bound(self):
+        return self.bound_folder is not None
+    
+    def bind_folder(self, folder_path: str, clear_memory_data: bool = True):
+        self.bound_folder = folder_path
+        if clear_memory_data:
+            self.data.clear()
+    
+    def unbind_folder(self, load_data: bool = True):
+        if load_data:
+            self.data = FrameList.from_file(self.bound_folder).data
+        self.bound_folder = None
 

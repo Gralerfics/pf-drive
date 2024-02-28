@@ -8,7 +8,7 @@ from webots_ros.srv import supervisor_get_from_defRequest, supervisor_get_from_d
 from webots_ros.srv import node_get_positionRequest, node_get_positionResponse, node_get_position, node_get_orientationRequest, node_get_orientationResponse, node_get_orientation
 
 from tr_drive.util.debug import Debugger
-from tr_drive.util.conversion import Vec3, Quat, Frame
+from tr_drive.util.geometry import Vec3, Quat, Frame
 
 from tr_drive.sensor.odometry import Odom
 

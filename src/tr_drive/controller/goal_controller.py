@@ -8,7 +8,7 @@ import rospy
 from geometry_msgs.msg import Twist
 
 from tr_drive.util.debug import Debugger
-from tr_drive.util.conversion import Frame
+from tr_drive.util.geometry import Frame
 
 from tr_drive.sensor.odometry import Odom
 

@@ -4,8 +4,8 @@ import threading
 import rospy
 
 from tr_drive.util.debug import Debugger
-from tr_drive.util.namespace import DictRegulator
-from tr_drive.util.conversion import Frame, type_from_str
+from tr_drive.util.namespace import DictRegulator, type_from_str
+from tr_drive.util.geometry import Frame
 
 from tr_drive.sensor.odometry import Odom
 from tr_drive.sensor.camera import Camera
@@ -136,7 +136,7 @@ class Teacher:
             return False
         
         path = self.params.persistent.recording_folder + '/' + (self.params.persistent.recording_name if not self.params.persistent.auto_naming else time.strftime('%Y-%m-%d_%H:%M:%S'))
-        self.recording.to_path(path)
+        self.recording.to_file(path)
         self.launched.clear()
         return True
     

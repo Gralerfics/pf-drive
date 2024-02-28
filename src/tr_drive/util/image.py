@@ -124,6 +124,14 @@ class DigitalImage:
         return DigitalImage(cv2.resize(self.data, (width, height), interpolation = cv2.INTER_AREA))
 
 
+class DigitalImageList:
+    # 不绑定目录则使用内存存储, 绑定目录则使用文件存储.
+    def __init__(self):
+        pass
+
+
+
+
 class ImageProcessor:
     @staticmethod
     def kernel_normalize(image, patch_size: int):
