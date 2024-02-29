@@ -6,8 +6,8 @@ import rospy
 import numpy as np
 
 from tr_drive.util.debug import Debugger
-from tr_drive.util.namespace import DictRegulator, type_from_str
-from tr_drive.util.geometry import Vec3, Frame, FrameList
+from tr_drive.util.namespace import DictRegulator, type_from_str, generate_time_str
+from tr_drive.util.geometry import Vec3, Frame
 from tr_drive.util.image import ImageProcessor
 
 from tr_drive.sensor.odometry import Odom
@@ -39,7 +39,7 @@ class Repeater:
         self.goal_intervals: list[float] = [] # the intervals between goal i and goal i + 1
         self.goal_distances: list[float] = [] # the distances between goal 0 and goal i
 
-        self.passed_goal_image_match_offset: int = 0 # for GUI; 关于线程安全: 对 int 仅赋值和读取在 Python 这里似乎是原子的.
+        self.passed_goal_image_match_offset: int = 0 # for GUI; 关于线程安全: 对 int 仅赋值和读取在 Python 这里似乎是原子的
         self.next_goal_image_match_offset: int = 0 # 同上
 
         # P.S. 命名上 T 代表 Transfrom, 0 为 biased_odom 原点, a 为刚经过的目标, b 为下一个目标, c 为当前 biased_odom.
@@ -48,10 +48,12 @@ class Repeater:
         
         # parameters (with default camera parameters, will be modified when loading recording)
         self.params = DictRegulator(rospy.get_param('/tr'))
-        self.global_locator_used = 'global_locator' in self.params # 是否引入全局定位信息.
-        self.params.camera.add('patch_size', 15) # TODO: DictRegulator 覆写赋值
-        self.params.camera.add('resize', [150, 50])
-        self.params.camera.add('horizontal_fov', 114.59)
+
+        self.global_locator_used = 'global_locator' in self.params # 是否引入全局定位信息
+
+        self.save_report = not self.params.persistent.report_path.startswith('.none')
+        if self.params.persistent.report_path.startswith('.auto'):
+            self.params.persistent.report_path = generate_time_str()
         
         # devices
         self.init_devices()
@@ -65,18 +67,19 @@ class Repeater:
     def init_devices(self):
         self.camera = Camera(
             raw_image_topic = self.params.camera.raw_image_topic,
-            patch_size = self.params.camera.patch_size,
-            resize = self.params.camera.resize,
-            horizontal_fov = self.params.camera.horizontal_fov,
+            patch_size = 15, # self.params.camera.patch_size, <- defaults
+            resize = [150, 50], # self.params.camera.resize,
+            horizontal_fov = 114.59, # self.params.camera.horizontal_fov,
             processed_image_topic = self.params.camera.processed_image_topic
         )
-        # self.camera.register_image_received_hook(self.image_received)
+        self.params.remove('camera') # 参数存储于设备实例后即删除, 以保证唯一性, 避免参数变更时的冗余和冲突
         self.camera.wait_until_ready()
         
         self.odometry = Odom(
             odom_topic = self.params.odometry.odom_topic,
             processed_odom_topic = self.params.odometry.processed_odom_topic
         )
+        self.params.remove('odometry')
         self.odometry.register_odom_received_hook(self.odom_received)
         self.odometry.wait_until_ready()
         
@@ -93,6 +96,7 @@ class Repeater:
             translation_tolerance = self.params.controller.translation_tolerance,
             rotation_tolerance = self.params.controller.rotation_tolerance
         )
+        self.params.remove('controller')
         self.controller.set_odometry(self.odometry)
         self.controller.wait_until_ready()
         
@@ -122,7 +126,7 @@ class Repeater:
                     robot_def = self.params.global_locator.robot_def,
                     robot_name = self.params.global_locator.robot_name
                 )
-            # self.global_locator.register_global_frame_received_hook(self.global_frame_received)
+            self.params.remove('global_locator')
             self.global_locator.wait_until_ready()
     
     def load_recording(self):
@@ -138,11 +142,7 @@ class Repeater:
         self.goal_intervals.append(0.0)
         
         # modify camera parameters
-        img_param = self.recording.get_image_parameters()
-        self.params.camera.patch_size = img_param['patch_size']
-        self.params.camera.resize = img_param['resize']
-        self.params.camera.horizontal_fov = img_param['horizontal_fov']
-        self.camera.set_params(**img_param)
+        self.camera.set_params(**self.recording.get_image_parameters())
     
     def is_ready(self):
         return self.ready.is_set()
@@ -181,7 +181,6 @@ class Repeater:
 
         # 起点对齐
         if self.global_locator_used and self.recording.is_ground_truths_available():
-            # self.global_locator.align_odom_with_global(self.odometry.get_odom(), self.recording.ground_truths[self.get_passed_goal_index()])
             self.global_locator.align_biased_odom_with_global(self.recording.odoms[self.get_passed_goal_index()], self.recording.ground_truths[self.get_passed_goal_index()])
         
         # 发布路径
@@ -218,15 +217,8 @@ class Repeater:
             offsets[i], values[i] = ImageProcessor.best_match_offset(image, self.recording.processed_images[idx], self.params.repeater.match_offset_radius)
         return offsets.astype(int), values
 
-    def px_to_rad(self, px: int):
-        return px / self.params.camera.resize[0] * self.params.camera.horizontal_fov / 180 * np.pi
-    
     def distance_to_goal(self, d: float):
         return np.searchsorted(self.goal_distances[1:], d, side = 'right')
-    
-    # def image_received(self, **args):
-    #     if not self.is_ready() or not self.launched.is_set() or self.paused.is_set():
-    #         return
 
     def pass_to_next_goal(self):
         self.inc_passed_goal_index()
@@ -306,8 +298,8 @@ class Repeater:
                 return
 
             # rotation correction
-            theta_a = self.px_to_rad(scan_offsets[r - 1])
-            theta_b = self.px_to_rad(scan_offsets[r])
+            theta_a = self.camera.px_to_rad_horizontal(scan_offsets[r - 1])
+            theta_b = self.camera.px_to_rad_horizontal(scan_offsets[r])
             delta_theta = (1 - u) * theta_a + u * theta_b
             rotation_correction = self.params.repeater.k_rotation * delta_theta # 由于逆时针才是正方向，故刚好符号对消.
 
@@ -358,7 +350,7 @@ class Repeater:
 
 """ TODO ideas
 录制:
-    添加即时读写模式, 减轻内存负担.
+    添加即时读写模式, 减轻内存负担. (完成)
         (若无将所有 raw_image 读入的情况, 占用内存实际上可以接受, e.g. 150x50 grayscale 2000 张约占 15 MB; 但录制过程中会出现所有 raw_image 在内存中的情况)
     添加重复路线的记录, 用于比对.
         要不拆分类型, 坐标序列和图像序列分别编写读写控制, 不再被绑定到 Recording 类.
@@ -367,10 +359,10 @@ class Repeater:
     [important] 修改 goal_controller, 减少目标平移对旋转指令的即时影响; 或许也可以增大 advance distance; 或许也有 rotation offset 估计跳变的原因.
 图形界面:
     封装一下?
-算法:
-    切换目标后的第一次估计暂时不发布为 goal; (没有完全解决问题)
-    记录累积转向, 在大趋势上提前补偿;
-    长时间停留 -> pass_to_next_goal (?);
+控制:
+    切换目标后的第一次估计暂时不发布为 goal; (完成, 效果貌似不明显)
+    记录累积转向, 在大趋势上提前补偿; (感觉和增加 I 项类似)
+    长时间停留 -> pass_to_next_goal; (不卡在原地的备用手段, 目前暂无卡死情况)
     金字塔匹配辅助确认距离;
     互相关加权, 倾向小角度;
     角度校正跳变处理 (例如跨度过大则找其他尖峰等);

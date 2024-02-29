@@ -1,4 +1,5 @@
 import os
+import time
 
 from geometry_msgs.msg import Pose, PoseStamped, PoseWithCovariance, PoseWithCovarianceStamped
 from nav_msgs.msg import Odometry, Path
@@ -29,6 +30,10 @@ class DictRegulator:
             else:
                 res[key] = value
         return res
+
+
+def generate_time_str():
+    time.strftime('%Y-%m-%d_%H:%M:%S')
 
 
 def recursive_dict_update(d: dict, u: dict):

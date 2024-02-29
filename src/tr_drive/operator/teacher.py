@@ -4,7 +4,7 @@ import threading
 import rospy
 
 from tr_drive.util.debug import Debugger
-from tr_drive.util.namespace import DictRegulator, type_from_str
+from tr_drive.util.namespace import DictRegulator, type_from_str, generate_time_str
 from tr_drive.util.geometry import Frame
 
 from tr_drive.sensor.odometry import Odom
@@ -16,6 +16,7 @@ from tr_drive.persistent.recording import Recording
 
 """
     示教.
+    注意: 记录完起点数据后再开始控制移动.
     
     is_ready():
         为 True 时方允许: 重置; 启动; 继续; 处理 image 和 odom 消息.
@@ -34,7 +35,7 @@ class Teacher:
         
         # parameters
         self.params = DictRegulator(rospy.get_param('/tr'))
-        self.params.persistent.add('auto_naming', self.params.persistent.recording_name.startswith('.'))
+        self.params.persistent.add('auto_naming', self.params.persistent.recording_name.startswith('.auto'))
         self.global_locator_used = 'global_locator' in self.params # 是否引入全局定位信息
         
         # devices
@@ -54,6 +55,7 @@ class Teacher:
             horizontal_fov = self.params.camera.horizontal_fov,
             processed_image_topic = self.params.camera.processed_image_topic
         )
+        self.params.remove('camera') # 参数存储于设备实例后即删除, 以保证唯一性, 避免参数变更时的冗余和冲突
         # self.camera.register_image_received_hook(self.image_received)
         self.camera.wait_until_ready()
         
@@ -61,6 +63,7 @@ class Teacher:
             odom_topic = self.params.odometry.odom_topic,
             processed_odom_topic = self.params.odometry.processed_odom_topic
         )
+        self.params.remove('odometry')
         self.odometry.register_odom_received_hook(self.odom_received)
         self.odometry.wait_until_ready()
         
@@ -90,7 +93,7 @@ class Teacher:
                     robot_def = self.params.global_locator.robot_def,
                     robot_name = self.params.global_locator.robot_name
                 )
-            # self.global_locator.register_global_frame_received_hook(self.global_frame_received)
+            self.params.remove('global_locator')
             self.global_locator.wait_until_ready()
     
     def init_recording(self):
@@ -129,7 +132,7 @@ class Teacher:
         if not self.is_ready() or self.launched.is_set():
             return False
         
-        path = self.params.persistent.recording_folder + '/' + (self.params.persistent.recording_name if not self.params.persistent.auto_naming else time.strftime('%Y-%m-%d_%H:%M:%S'))
+        path = self.params.persistent.recording_folder + '/' + (self.params.persistent.recording_name if not self.params.persistent.auto_naming else generate_time_str())
         self.recording.bind_folder(path) # start 后固定录制数据的 path 不再修改, 故此处进行绑定
         
         self.reset_recording() # recording 中 bind_folder 仅进行绑定路径赋值, 不会清除数据, 故此处进行清除

@@ -1,4 +1,5 @@
 import time
+import math
 import threading
 
 import rospy
@@ -74,6 +75,9 @@ class Camera:
             rospy.loginfo('Waiting for image ...')
             time.sleep(0.2)
         rospy.loginfo('Camera is ready.')
+    
+    def px_to_rad_horizontal(self, px: int):
+        return px / self.resize[0] * self.horizontal_fov / 180 * math.pi
     
     def set_params(self, **kwargs):
         with self.image_lock:

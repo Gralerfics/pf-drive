@@ -1,6 +1,6 @@
 <launch>
     <arg name="folder" />
-    <arg name="name" default="." />
+    <arg name="name" default=".auto" /> <!-- [value] / .auto -->
     <arg name="teleop_keyboard" default="true" />
 
 	<param name="/tr/persistent/recording_folder" value="$(arg folder)" />
