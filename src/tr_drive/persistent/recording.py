@@ -81,7 +81,7 @@ class Recording:
         
         self.raw_images: DigitalImageList = DigitalImageList()
         self.processed_images: DigitalImageList = DigitalImageList()
-        self.odoms: FrameList = FrameList()
+        self.odoms: FrameList = FrameList() # TODO: 相关变量目录等改名 biased_odom
         self.ground_truths: FrameList = FrameList()
 
         self.bind_folder(bound_folder) # 可传入 None

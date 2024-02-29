@@ -72,7 +72,6 @@ class Odom:
         if self.is_ready(): # 保证自身 ready 后再执行回调函数.
             for hook in self.odom_received_hooks:
                 hook()
-                # hook(biased_odom = self.get_biased_odom())
     
     def register_odom_received_hook(self, hook):
         self.odom_received_hooks.append(hook)
