@@ -140,7 +140,7 @@ class Recording:
                 processed_img = ImageProcessor.kernel_normalize(img.interpolate(*resize).grayscale(), patch_size)
                 recording.processed_images.append(processed_img)
             
-            recording.processed_images.to_file(folder_path = folder_path) # 前面已经绑定 recording 的路径, 此处传入实际无效果
+            recording.processed_images.to_file(folder_path = folder_path + recording.PROCESSED_IMAGES_FOLDER)
 
         # 检查数据完整性
         if not recording.is_available():
