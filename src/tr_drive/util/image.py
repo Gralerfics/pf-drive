@@ -134,15 +134,17 @@ class DigitalImage:
 
 
 class DigitalImageList:
-    # Python 貌似无类似模板类的东西, 暂且写两遍类似的东西, 注释见 geometry 中的 FrameList.
-    def __init__(self, frames: list = [], bound_folder = None):
-        assert all(isinstance(frame, DigitalImage) for frame in frames)
+    # Python 貌似无类似模板类的东西, 暂且写两遍类似的东西, 详细注释见 geometry 中的 FrameList.
+    def __init__(self, imgs: list = [], bound_folder = None):
+        assert all(isinstance(img, DigitalImage) for img in imgs)
         
-        self.data = list(frames)
-        self.bound_folder = bound_folder
+        self.data = list(imgs)
+        self.bind_folder(bound_folder)
     
     def __getitem__(self, index):
         assert isinstance(index, int)
+        if index < 0:
+            index += len(self)
         if self.is_folder_bound():
             return DigitalImage.from_file(self.bound_folder + '/' + str(index) + '.jpg')
         else:
@@ -150,6 +152,8 @@ class DigitalImageList:
 
     def __setitem__(self, index, value):
         assert isinstance(index, int) and isinstance(value, DigitalImage)
+        if index < 0:
+            index += len(self)
         if self.is_folder_bound():
             value.to_file(self.bound_folder + '/' + str(index) + '.jpg')
         else:
@@ -161,47 +165,55 @@ class DigitalImageList:
         else:
             return len(self.data)
     
-    def append(self, frame: DigitalImage):
+    def append(self, img: DigitalImage):
         if self.is_folder_bound():
-            self.__setitem__(len(self), frame)
+            self.__setitem__(len(self), img)
         else:
-            self.data.append(frame)
+            self.data.append(img)
 
     def copy(self):
-        return DigitalImageList([frame.copy() for frame in self.data])
+        return DigitalImageList([img.copy() for img in self.data])
     
     @staticmethod
-    def is_filename_valid(self, filename: str):
+    def is_filename_valid(filename: str):
         return filename.endswith('.jpg') # TODO
     
     @staticmethod
-    def from_file(folder_path: str):
-        if not os.path.exists(folder_path):
-            raise FileNotFoundError("Folder not found.")
-        frames = []
-        for filename in get_sorted_file_list(folder_path):
-            if DigitalImageList.is_filename_valid(filename):
-                frames.append(DigitalImage.from_file(folder_path + '/' + filename))
-        return DigitalImageList(frames)
+    def from_file(folder_path: str, ifio: bool = False, allow_not_existed: bool = False):
+        if ifio:
+            return DigitalImageList(bound_folder = folder_path)
+        else:
+            if not os.path.exists(folder_path):
+                if allow_not_existed:
+                    return DigitalImageList([])
+                raise FileNotFoundError("Folder not found.")
+            imgs = []
+            for filename in get_sorted_file_list(folder_path):
+                if DigitalImageList.is_filename_valid(filename):
+                    imgs.append(DigitalImage.from_file(folder_path + '/' + filename))
+            return DigitalImageList(imgs)
     
     def to_file(self, folder_path: str):
-        os.makedirs(folder_path, exist_ok = True)
-        for i, frame in enumerate(self.data):
-            frame.to_file(folder_path + '/' + str(i) + '.jpg')
-        self.bind_folder(folder_path)
+        if not self.is_folder_bound():
+            os.makedirs(folder_path, exist_ok = True)
+            for i, img in enumerate(self.data):
+                img.to_file(folder_path + '/' + str(i) + '.jpg')
 
     def is_folder_bound(self):
         return self.bound_folder is not None
     
     def bind_folder(self, folder_path: str, clear_memory_data: bool = True):
         self.bound_folder = folder_path
-        if clear_memory_data:
-            self.data.clear()
+        if folder_path is not None:
+            os.makedirs(folder_path, exist_ok = True)
+            if clear_memory_data:
+                self.data.clear()
     
-    # def unbind_folder(self, load_data: bool = True):
-    #     if load_data:
-    #         self.data = DigitalImageList.from_file(self.bound_folder).data
-    #     self.bound_folder = None
+    def unbind_folder(self, load_data_into_memory: bool = False):
+        if self.is_folder_bound():
+            if load_data_into_memory:
+                self.data = DigitalImageList.from_file(self.bound_folder).data
+            self.bound_folder = None
 
     def clear(self):
         if self.is_folder_bound():

@@ -338,18 +338,42 @@ class Frame:
         return (other.I * self).translation.norm()
 
 
+"""
+设计:
+    不绑定目录则使用内存存储, 绑定目录则使用文件存储.
+    绑定后, __getitem__ / __setitem__ / append 操作会同步到文件系统, self.data 失效.
+    不选择继承 list, 以避免需要重载 list 其他方法.
+    保证每个方法在两种模式下皆可用, 即使是无效.
+样例 (内存模式):
+    frames = FrameList([...]) # 创建
+    或 frames = FrameList.from_file('...', ifio = False) # 从文件读取到内存
+    frames.append(Frame()) / frames[...] / ... # 操作
+    frames.to_file('...') # 从保存保存到文件
+    frames.unbind_folder() # 在该模式下实际无效果
+样例 (外存模式):
+    frames = FrameList(bound_folder = ...) # 绑定目录 (无则创建) 实例化
+    或 frames = FrameList.from_file('...', ifio = True) # 效果同上, 为 Recording 针对 Repeater 的使用方法
+    或创建后手动绑定, 见后, 也即 Recording 针对 Teacher 的使用方法
+    ... # 操作
+    frames.to_file(['...']) # 在该模式下实际无效果, 目的是在类似 Recording 的数据簇中统一两种模式的使用接口
+    frames.unbind_folder() # optional
+样例 (手动绑定):
+    frames = FrameList()
+    frames.bind_folder(...) # 绑定操作仅会赋值和创建目录, 重复调用即覆盖
+    内存模式下可以 frames.bind_folder(None) # 无效果, 用以统一二者
+    ...
+"""
 class FrameList:
-    # 不绑定目录则使用内存存储, 绑定目录则使用文件存储.
-    # 绑定后, __getitem__ / __setitem__ / append 操作会同步到文件系统, self.data 失效.
-    # 不选择继承 list, 以避免需要重载 list 其他方法.
     def __init__(self, frames: list = [], bound_folder = None):
         assert all(isinstance(frame, Frame) for frame in frames)
         
         self.data = list(frames)
-        self.bound_folder = bound_folder
+        self.bind_folder(bound_folder) # 保证创建目录
     
-    def __getitem__(self, index):
+    def __getitem__(self, index): # TODO: 仅支持单个索引, 切片操作暂时未考虑, 仅考虑负数索引
         assert isinstance(index, int)
+        if index < 0:
+            index += len(self)
         if self.is_folder_bound():
             return Frame.from_file(self.bound_folder + '/' + str(index) + '.json')
         else:
@@ -357,6 +381,8 @@ class FrameList:
 
     def __setitem__(self, index, value):
         assert isinstance(index, int) and isinstance(value, Frame)
+        if index < 0:
+            index += len(self)
         if self.is_folder_bound():
             value.to_file(self.bound_folder + '/' + str(index) + '.json')
         else:
@@ -378,26 +404,32 @@ class FrameList:
         return FrameList([frame.copy() for frame in self.data])
     
     @staticmethod
-    def is_filename_valid(self, filename: str):
+    def is_filename_valid(filename: str):
         return filename.endswith('.json') # TODO
     
     @staticmethod
-    def from_file(folder_path: str): # 整体从文件读取到 self.data; 不会同时绑定目录, 因为绑定目录后 self.data 不会被使用.
-        if not os.path.exists(folder_path):
-            raise FileNotFoundError("Folder not found.")
-        frames = []
-        for filename in get_sorted_file_list(folder_path):
-            if FrameList.is_filename_valid(filename):
-                frames.append(Frame.from_file(folder_path + '/' + filename))
-        return FrameList(frames)
+    def from_file(folder_path: str, ifio: bool = False, allow_not_existed: bool = False): # 从路径构造实例, 可选模式; 可选允许不存在, 若不存在则返回空内容 (内存模式) 或创建文件夹 (外存模式)
+        if ifio: # 外存模式
+            return FrameList(bound_folder = folder_path)
+        else: # 内存模式
+            if not os.path.exists(folder_path):
+                if allow_not_existed:
+                    return FrameList([])
+                raise FileNotFoundError("Folder not found.")
+            frames = []
+            for filename in get_sorted_file_list(folder_path):
+                if FrameList.is_filename_valid(filename):
+                    frames.append(Frame.from_file(folder_path + '/' + filename))
+            return FrameList(frames)
     
-    def to_file(self, folder_path: str): # 整体写到文件.
-        os.makedirs(folder_path, exist_ok = True)
-        for i, frame in enumerate(self.data):
-            frame.to_file(folder_path + '/' + str(i) + '.json')
-        self.bind_folder(folder_path)
+    def to_file(self, folder_path: str = None): # 内存模式下传入路径整体保存数据, 外存模式下自动失效无视参数
+        if not self.is_folder_bound():
+            assert folder_path is not None
+            os.makedirs(folder_path, exist_ok = True) # 内存模式写入也需创建目录
+            for i, frame in enumerate(self.data):
+                frame.to_file(folder_path + '/' + str(i) + '.json')
     
-    def to_Path(self, frame_id = ''):
+    def to_Path(self, frame_id = ''): # 转换为 Path 消息, 自动检查模式
         msg = Path()
         msg.header.frame_id = frame_id
         if self.is_folder_bound():
@@ -407,19 +439,22 @@ class FrameList:
             msg.poses = [frame.to_PoseStamped(frame_id) for frame in self.data]
         return msg
 
-    def is_folder_bound(self):
+    def is_folder_bound(self): # 是否绑定目录, 即为外存模式
         return self.bound_folder is not None
     
-    def bind_folder(self, folder_path: str, clear_memory_data: bool = True):
+    def bind_folder(self, folder_path: str, clear_memory_data: bool = True): # 使用外存模式, 绑定目录, 可选清除内存数据; 允许输入 None 以统一两种模式
         self.bound_folder = folder_path
-        if clear_memory_data:
-            self.data.clear()
+        if folder_path is not None:
+            os.makedirs(folder_path, exist_ok = True) # 绑定同时创建目录, 保证有绑定就有目录
+            if clear_memory_data:
+                self.data.clear()
     
-    # def unbind_folder(self, load_data: bool = True):
-    #     if load_data:
-    #         self.data = FrameList.from_file(self.bound_folder).data
-    #     self.bound_folder = None
-
+    def unbind_folder(self, load_data_into_memory: bool = False): # 使用内存模式, 解绑目录, 可选加载数据
+        if self.is_folder_bound():
+            if load_data_into_memory:
+                self.data = FrameList.from_file(self.bound_folder).data
+            self.bound_folder = None
+    
     def clear(self):
         if self.is_folder_bound():
             for filename in os.listdir(self.bound_folder):

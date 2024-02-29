@@ -18,6 +18,7 @@ from tr_drive.sensor.global_locator import GlobalLocator
 from tr_drive.persistent.recording import Recording
 
 
+# TODO: 设备参数不再存储在 Repeater 中, 改为存储在设备对象中, 这样可以省去重复的参数更新.
 class Repeater:
     def __init__(self):
         # private
@@ -48,7 +49,7 @@ class Repeater:
         # parameters (with default camera parameters, will be modified when loading recording)
         self.params = DictRegulator(rospy.get_param('/tr'))
         self.global_locator_used = 'global_locator' in self.params # 是否引入全局定位信息.
-        self.params.camera.add('patch_size', 15)
+        self.params.camera.add('patch_size', 15) # TODO: DictRegulator 覆写赋值
         self.params.camera.add('resize', [150, 50])
         self.params.camera.add('horizontal_fov', 114.59)
         
@@ -127,20 +128,21 @@ class Repeater:
     def load_recording(self):
         # load recording
         self.recording = Recording.from_file(self.params.persistent.recording_path)
-        
+
         # initialize goal intervals and distances
         self.goal_distances.append(0.0)
-        for idx in range(len(self.recording.odoms) - 1):
+        for idx in range(len(self.recording) - 1):
             d = (self.recording.odoms[idx + 1].t - self.recording.odoms[idx].t).norm()
             self.goal_intervals.append(d)
             self.goal_distances.append(self.goal_distances[-1] + d)
         self.goal_intervals.append(0.0)
         
         # modify camera parameters
-        self.params.camera.patch_size = self.recording.params['image']['patch_size']
-        self.params.camera.resize = self.recording.params['image']['resize']
-        self.params.camera.horizontal_fov = self.recording.params['image']['horizontal_fov']
-        self.camera.set_params(**self.params.camera.to_dict())
+        img_param = self.recording.get_image_parameters()
+        self.params.camera.patch_size = img_param['patch_size']
+        self.params.camera.resize = img_param['resize']
+        self.params.camera.horizontal_fov = img_param['horizontal_fov']
+        self.camera.set_params(**img_param)
     
     def is_ready(self):
         return self.ready.is_set()
@@ -178,16 +180,16 @@ class Repeater:
         self.T_0b = self.recording.odoms[self.get_passed_goal_index() + 1] # in fact, OA + AB
 
         # 起点对齐
-        if self.global_locator_used and len(self.recording.ground_truths) > 0:
+        if self.global_locator_used and self.recording.is_ground_truths_available():
             self.global_locator.align_frame(self.odometry.get_odom(), self.recording.ground_truths[0])
         
         # 发布路径
         biased_odom_frame_id = self.odometry.get_biased_odom_frame_id()
-        self.debugger.publish('/recorded_odoms', FrameList(self.recording.odoms).to_Path(frame_id = biased_odom_frame_id))
-        if self.global_locator_used:
+        self.debugger.publish('/recorded_odoms', self.recording.odoms.to_Path(frame_id = biased_odom_frame_id))
+        if self.global_locator_used and self.recording.is_ground_truths_available():
             aligned_global_frame_id = self.global_locator.get_aligned_global_frame_id()
             if aligned_global_frame_id is not None:
-                self.debugger.publish('/recorded_gts', FrameList(self.recording.ground_truths).to_Path(frame_id = aligned_global_frame_id))
+                self.debugger.publish('/recorded_gts', self.recording.ground_truths.to_Path(frame_id = aligned_global_frame_id))
         
         self.launched.set()
         return True
@@ -230,7 +232,7 @@ class Repeater:
         self.new_goal_passed.set()
         
         i = self.get_passed_goal_index()
-        n = len(self.recording.odoms)
+        n = len(self.recording)
         if i >= n - 1:
             rospy.loginfo('Finished.')
             self.pause()
@@ -260,7 +262,7 @@ class Repeater:
         # print(f'{t_current - t_odom}')
         
         i = self.get_passed_goal_index()
-        n = len(self.recording.odoms)
+        n = len(self.recording)
         r = self.params.repeater.along_path_radius
         
         T_0c: Frame = self.odometry.get_biased_odom()
@@ -284,7 +286,7 @@ class Repeater:
             # u = np.clip(d_p_ac / d_ab, 0.0, 1.0) # if not turning_goal else 0.0 # 0.5
             
             # along-path correction
-            scan_indices = list(range(max(0, i - r + 1), min(len(self.recording.odoms), i + r + 1)))
+            scan_indices = list(range(max(0, i - r + 1), min(n, i + r + 1)))
             scan_distances = np.array([self.goal_distances[idx] for idx in scan_indices]) - self.goal_distances[i] - d_p_ac # c 处为 0
             scan_offsets, scan_values = self.batched_match(self.camera.get_processed_image(), scan_indices)
             scan_values[scan_values < 0.1] = 0 # TODO, threshold
@@ -319,7 +321,7 @@ class Repeater:
             # print(f'rot_c: {rotation_correction}; ap_c: {along_path_correction}\n')
 
         # new estimation of T_0b
-        if not turning_goal: # TODO ?
+        if not turning_goal:
             correction_offset = Frame.from_z_rotation(rotation_correction) * T_cb
             correction_offset.translation *= along_path_correction
             self.T_0b = T_0c * correction_offset
@@ -342,10 +344,11 @@ class Repeater:
             self.debugger.publish('/b', self.T_0b.to_PoseStamped(frame_id = biased_odom_frame_id))
             self.debugger.publish('/r', self.odometry.get_biased_odom().to_PoseStamped(frame_id = biased_odom_frame_id))
 
-            aligned_map_frame_id = self.global_locator.get_aligned_global_frame_id()
-            self.debugger.publish('/a_gt', self.recording.ground_truths[i].to_PoseStamped(frame_id = aligned_map_frame_id))
-            if i < len(self.recording.ground_truths) - 1:
-                self.debugger.publish('/b_gt', self.recording.ground_truths[i + 1].to_PoseStamped(frame_id = aligned_map_frame_id))
+            if self.global_locator_used:
+                aligned_map_frame_id = self.global_locator.get_aligned_global_frame_id()
+                self.debugger.publish('/a_gt', self.recording.ground_truths[i].to_PoseStamped(frame_id = aligned_map_frame_id))
+                if i < len(self.recording) - 1:
+                    self.debugger.publish('/b_gt', self.recording.ground_truths[i + 1].to_PoseStamped(frame_id = aligned_map_frame_id))
             
             self.controller.set_goal(goal_advanced)
         else:

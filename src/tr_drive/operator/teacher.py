@@ -35,7 +35,7 @@ class Teacher:
         # parameters
         self.params = DictRegulator(rospy.get_param('/tr'))
         self.params.persistent.add('auto_naming', self.params.persistent.recording_name.startswith('.'))
-        self.global_locator_used = 'global_locator' in self.params # 是否引入全局定位信息.
+        self.global_locator_used = 'global_locator' in self.params # 是否引入全局定位信息
         
         # devices
         self.init_devices()
@@ -95,6 +95,7 @@ class Teacher:
     
     def init_recording(self):
         self.recording = Recording()
+        self.recording.reset_binding_states(raw_images_ifio = True)
         self.recording.set_image_parameters(
             raw_size = [self.camera.get_raw_image().width, self.camera.get_raw_image().height],
             patch_size = self.camera.patch_size,
@@ -118,7 +119,7 @@ class Teacher:
     def reset_recording(self):
         if not self.is_ready():
             return False
-
+        
         self.recording.clear()
         self.odometry.zeroize()
         self.launched.clear()
@@ -128,15 +129,20 @@ class Teacher:
         if not self.is_ready() or self.launched.is_set():
             return False
         
-        self.reset_recording()
+        path = self.params.persistent.recording_folder + '/' + (self.params.persistent.recording_name if not self.params.persistent.auto_naming else time.strftime('%Y-%m-%d_%H:%M:%S'))
+        self.recording.bind_folder(path) # start 后固定录制数据的 path 不再修改, 故此处进行绑定
+        
+        self.reset_recording() # recording 中 bind_folder 仅进行绑定路径赋值, 不会清除数据, 故此处进行清除
+        
         self.launched.set()
     
     def stop_recording(self):
         if not self.is_ready() or not self.launched.is_set():
             return False
         
-        path = self.params.persistent.recording_folder + '/' + (self.params.persistent.recording_name if not self.params.persistent.auto_naming else time.strftime('%Y-%m-%d_%H:%M:%S'))
-        self.recording.to_file(path)
+        self.recording.to_file()
+        self.recording.unbind_folder()
+
         self.launched.clear()
         return True
     
