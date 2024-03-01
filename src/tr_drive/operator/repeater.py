@@ -1,3 +1,4 @@
+import os
 import time
 import threading
 
@@ -7,7 +8,7 @@ import numpy as np
 
 from tr_drive.util.debug import Debugger
 from tr_drive.util.namespace import DictRegulator, type_from_str, generate_time_str
-from tr_drive.util.geometry import Vec3, Frame
+from tr_drive.util.geometry import Vec3, Frame, FrameList
 from tr_drive.util.image import ImageProcessor
 
 from tr_drive.sensor.odometry import Odom
@@ -54,6 +55,7 @@ class Repeater:
         self.save_report = not self.params.persistent.report_path.startswith('.none')
         if self.params.persistent.report_path.startswith('.auto'):
             self.params.persistent.report_path = generate_time_str()
+        self.repeat_ground_truth_odoms: FrameList = FrameList()
         
         # devices
         self.init_devices()
@@ -228,6 +230,10 @@ class Repeater:
         n = len(self.recording)
         if i >= n - 1:
             rospy.loginfo('Finished.')
+            if self.save_report: # TODO
+                os.makedirs(self.params.persistent.report_path, exist_ok = True)
+                self.repeat_ground_truth_odoms.to_tum_file(self.params.persistent.report_path + '/traj_repeat.txt')
+                self.recording.ground_truths.to_tum_file(self.params.persistent.report_path + '/traj_teach.txt')
             self.pause()
             return
 
@@ -318,6 +324,10 @@ class Repeater:
             correction_offset = Frame.from_z_rotation(rotation_correction) * T_cb
             correction_offset.translation *= along_path_correction
             self.T_0b = T_0c * correction_offset
+
+        # report, TODO: 参数控制暂略, 此处将保存数据, 最终输出一个 tum 标准的路径文件
+        if self.save_report:
+            self.repeat_ground_truth_odoms.append(self.global_locator.get_global_frame())
 
         # goal
         if not self.new_goal_passed.is_set():

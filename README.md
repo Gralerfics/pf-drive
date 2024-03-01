@@ -21,29 +21,7 @@ Teach and repeat driving controller.
 
 `launch/`：ROS 启动文件。
 
-启动仿真环境（Turtlebot 3）：
-
-```
-roslaunch tr_drive tb3_wbt.launch [rviz:=false]
-```
-
-启动 Teacher：
-
-```
-roslaunch tr_drive tb3_teach.launch folder:="..." [name:='.'] [teleop_keyboard:=false]
-```
-
-启动 GMapping（可选）：
-
-```
-roslaunch tr_drive tb3_gmapping.launch
-```
-
-启动 Repeater：
-
-```
-roslaunch tr_drive tb3_repeat.launch path:="..."
-```
+使用见后。
 
 ---
 
@@ -77,6 +55,47 @@ patch normalization 处理，后者订阅里程计 Odometry 数据，转为 Fram
 ---
 
 `worlds/`：Webots 场景文件。
+
+## Usages
+
+### 启动
+
+启动仿真环境（Turtlebot 3）：
+
+```
+roslaunch tr_drive tb3_wbt.launch [rviz:=false]
+```
+
+启动 Teacher：
+
+```
+roslaunch tr_drive tb3_teach.launch folder:="..." [name:='.../.auto'] [teleop_keyboard:=false]
+```
+
+启动 GMapping（可选）：
+
+```
+roslaunch tr_drive tb3_gmapping.launch
+```
+
+启动 Repeater：
+
+```
+roslaunch tr_drive tb3_repeat.launch path:="..." [report:=".../.auto/.none"]
+```
+
+### 评估
+
+在 repeater 启动时传入 report 参数作为报告的路径，运行结束后会产生路径文件。
+
+截至编辑时，report 文件夹内容为 TUM 格式的文本两个 (traj_teach.txt 和 traj_repeat.txt)。
+
+可以使用 evo 绘图或评估，例如：
+
+```
+evo_traj tum traj_repeat.txt --ref=traj_teach.txt -p --plot_mode=xy
+evo_ape tum traj_teach.txt traj_repeat.txt --plot --plot_mode=xy
+```
 
 ## Notes
 

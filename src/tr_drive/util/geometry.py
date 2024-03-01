@@ -315,6 +315,9 @@ class Frame:
             'quaternion': self.quaternion.to_list()
         }
 
+    def to_tum_format(self, timestamp):
+        return f'{timestamp} {self.t.x} {self.t.y} {self.t.z} {self.q.x} {self.q.y} {self.q.z} {self.q.w}'
+
     def to_file(self, file_path: str):
         with open(file_path, 'w') as f:
             json.dump(self.to_dict(), f)
@@ -433,12 +436,21 @@ class FrameList:
         msg = Path()
         msg.header.frame_id = frame_id
         if self.is_folder_bound():
-            for i in len(self):
+            for i in range(len(self)):
                 msg.poses.append(Frame.from_file(self.bound_folder + '/' + str(i) + '.json').to_PoseStamped(frame_id))
         else:
             msg.poses = [frame.to_PoseStamped(frame_id) for frame in self.data]
         return msg
-
+    
+    def to_tum_file(self, file_path: str): # 以迎合 evo
+        n = len(self)
+        with open(file_path, 'w') as f:
+            for i in range(n):
+                f.write(self[i].to_tum_format(i / n) + '\n')
+    
+    def to_kitti_file(self, file_path: str): # 以迎合 evo
+        pass # TODO
+    
     def is_folder_bound(self): # 是否绑定目录, 即为外存模式
         return self.bound_folder is not None
     
