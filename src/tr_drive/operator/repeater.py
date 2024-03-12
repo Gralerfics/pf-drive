@@ -19,7 +19,6 @@ from tr_drive.sensor.global_locator import GlobalLocator
 from tr_drive.persistent.recording import Recording
 
 
-# TODO: 设备参数不再存储在 Repeater 中, 改为存储在设备对象中, 这样可以省去重复的参数更新.
 class Repeater:
     def __init__(self):
         # private
@@ -69,7 +68,7 @@ class Repeater:
     def init_devices(self):
         self.camera = Camera(
             raw_image_topic = self.params.camera.raw_image_topic,
-            patch_size = 15, # self.params.camera.patch_size, <- defaults
+            patch_size = 15, # self.params.camera.patch_size,
             resize = [150, 50], # self.params.camera.resize,
             horizontal_fov = 114.59, # self.params.camera.horizontal_fov,
             processed_image_topic = self.params.camera.processed_image_topic
@@ -285,7 +284,8 @@ class Repeater:
             # u = np.clip(d_p_ac / d_ab, 0.0, 1.0) # if not turning_goal else 0.0 # 0.5
             
             # along-path correction
-            scan_indices = list(range(max(0, i - r + 1), min(n, i + r + 1)))
+            # scan_indices = list(range(max(0, i - r + 1), min(n, i + r + 1)))
+            scan_indices = np.clip(list(range(i - r + 1, i + r + 1)), 0, n - 1).tolist()
             scan_distances = np.array([self.goal_distances[idx] for idx in scan_indices]) - self.goal_distances[i] - d_p_ac # c 处为 0
             scan_offsets, scan_values = self.batched_match(self.camera.get_processed_image(), scan_indices)
             scan_values[scan_values < 0.1] = 0 # TODO, threshold
@@ -304,13 +304,13 @@ class Repeater:
                 return
 
             # rotation correction
-            theta_a = self.camera.px_to_rad_horizontal(scan_offsets[r - 1])
-            theta_b = self.camera.px_to_rad_horizontal(scan_offsets[r])
+            theta_a = self.camera.px_to_rad_horizontal(scan_offsets[r])
+            theta_b = self.camera.px_to_rad_horizontal(scan_offsets[r + 1])
             delta_theta = (1 - u) * theta_a + u * theta_b
             rotation_correction = self.params.repeater.k_rotation * delta_theta # 由于逆时针才是正方向，故刚好符号对消.
 
-            self.passed_goal_image_match_offset = scan_offsets[r - 1] # for GUI
-            self.next_goal_image_match_offset = scan_offsets[r] # 同上
+            self.passed_goal_image_match_offset = scan_offsets[r] # for GUI
+            self.next_goal_image_match_offset = scan_offsets[r + 1] # 同上
 
             # print(f'rot_c: {rotation_correction}; ap_c: {along_path_correction}; u: {u}; delta_d: {delta_distance}; d_ab/2: {d_ab / 2}\n')
         else:
@@ -384,6 +384,8 @@ class Repeater:
             k_along_path 也有待斟酌; 调参可视化 (?), 录制直线用于测试, 单步运算可视化等.
     帧率一高, 调节 k 虽然可以使路径更贴合, 但过程中左右摆动明显.
         把 P 改成 PD 或 PID (?)
+    测试稀疏打点.
+    修改控制器.
 """
 
 # if self.first_image is None:

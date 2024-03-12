@@ -119,7 +119,7 @@ class DigitalImage:
         else:
             raise ValueError("Unsupported channel")
     
-    def grayscale(self):
+    def to_grayscale(self):
         if self.channel == 1:
             return self
         elif self.channel == 3:
@@ -128,6 +128,18 @@ class DigitalImage:
             return DigitalImage(np.expand_dims(np.dot(self.data[:, :, :3], [0.299, 0.587, 0.114]).astype(np.uint8), axis = 2))
         else:
             raise ValueError("Unsupported channel")
+    
+    def to_rgb(self):
+        data = self.data
+        if self.channel == 1:
+            data = np.concatenate([data, data, data], axis = -1)
+        elif self.channel == 3:
+            pass
+        elif self.channel == 4:
+            data = data[:, :, [2, 1, 0]]
+        else:
+            raise ValueError("Unsupported channel")
+        return DigitalImage(data)
     
     def interpolate(self, width: int, height: int):
         return DigitalImage(cv2.resize(self.data, (width, height), interpolation = cv2.INTER_AREA))

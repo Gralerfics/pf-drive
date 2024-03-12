@@ -9,7 +9,7 @@ tr:
     controller:
         cmd_vel_topic: /tb3/controller/cmd_vel
         k_rho: 0.45 # 0.5 # k_rho > 0
-        k_alpha: 3.0 # 5.0 # k_alpha > k_rho
+        k_alpha: 2.0 # 5.0 # k_alpha > k_rho
         k_beta: -0.5 # -3.0 # k beta < 0
         k_theta: 4.0 # 7.0
         velocity_min: 0.0
@@ -26,8 +26,8 @@ tr:
     repeater:
         match_offset_radius: 90 # px
         along_path_radius: 2
-        k_rotation: 0.04 # 0.01; [!] may be related to time step
-        k_along_path: 0.02
+        k_rotation: 0.06 # 0.01; [!] may be related to time step
+        k_along_path: 0.03
         distance_threshold: 0.01
         angle_threshold: 0.05
         goal_advance_distance: 0.2

@@ -137,7 +137,7 @@ class Recording:
             
             for i in range(len(recording.raw_images)):
                 img = recording.raw_images[i]
-                processed_img = ImageProcessor.kernel_normalize(img.interpolate(*resize).grayscale(), patch_size)
+                processed_img = ImageProcessor.kernel_normalize(img.interpolate(*resize).to_grayscale(), patch_size)
                 recording.processed_images.append(processed_img)
             
             recording.processed_images.to_file(folder_path = folder_path + recording.PROCESSED_IMAGES_FOLDER)

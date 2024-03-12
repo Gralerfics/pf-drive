@@ -55,7 +55,7 @@ class Camera:
     def raw_image_cb(self, msg): # 订阅话题, 转为 DigitalImage 以及处理后存储; 若 ready 则执行回调函数.
         with self.image_lock:
             self.raw_image = DigitalImage(msg)
-            self.processed_image = ImageProcessor.kernel_normalize(DigitalImage(msg).interpolate(*self.resize).grayscale(), self.patch_size)
+            self.processed_image = ImageProcessor.kernel_normalize(DigitalImage(msg).interpolate(*self.resize).to_grayscale(), self.patch_size)
             # self.debugger.publish(self.processed_image_topic, self.processed_image.to_Image(encoding = 'mono8'))
         
         if self.is_ready(): # 保证自身 ready 后再执行回调函数.
