@@ -26,8 +26,8 @@ tr:
     repeater:
         match_offset_radius: 90 # px
         along_path_radius: 2
-        k_rotation: 0.06 # 0.01; [!] may be related to time step
-        k_along_path: 0.03
+        k_rotation: 0.06 # 0.06 # 0.01; [!] may be related to time step
+        k_along_path: 0.04 # 0.03
         distance_threshold: 0.01
         angle_threshold: 0.05
         goal_advance_distance: 0.2

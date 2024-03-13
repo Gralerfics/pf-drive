@@ -17,5 +17,5 @@ tr:
     teacher:
         save_raw_images: true
         save_ground_truth_odoms: true
-        rotation_threshold: 0.08 # rad
-        translation_threshold: 0.04 # m
+        rotation_threshold: 0.26 # 0.08 # rad
+        translation_threshold: 0.25 # 0.04 # m

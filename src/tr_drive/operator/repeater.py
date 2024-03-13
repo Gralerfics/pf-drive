@@ -1,5 +1,6 @@
 import os
 import time
+import json
 import threading
 
 import rospy
@@ -33,7 +34,7 @@ class Repeater:
         # public
         self.recording: Recording = None
         
-        self.passed_goal_index_lock = threading.Lock()
+        self.passed_goal_index_lock = threading.Lock() # 如下, 但对 int 的自增不是原子的
         self.passed_goal_index = 0 # the index of the nearest goal that has been passed
         
         self.goal_intervals: list[float] = [] # the intervals between goal i and goal i + 1
@@ -53,7 +54,7 @@ class Repeater:
 
         self.save_report = not self.params.persistent.report_path.startswith('.none')
         if self.params.persistent.report_path.startswith('.auto'):
-            self.params.persistent.report_path = generate_time_str()
+            self.params.persistent.report_path = self.params.persistent.recording_path + '_report' # TODO
         self.repeat_ground_truth_odoms: FrameList = FrameList()
         
         # devices
@@ -231,8 +232,39 @@ class Repeater:
             rospy.loginfo('Finished.')
             if self.save_report: # TODO
                 os.makedirs(self.params.persistent.report_path, exist_ok = True)
+                
+                # repeated path
                 self.repeat_ground_truth_odoms.to_tum_file(self.params.persistent.report_path + '/traj_repeat.txt')
+
+                # taught path
                 self.recording.ground_truths.to_tum_file(self.params.persistent.report_path + '/traj_teach.txt')
+
+                # repeating parameters
+                with open(self.params.persistent.report_path + '/parameters.json', 'w') as f:
+                    json.dump({
+                        'recording': self.params.persistent.recording_path,
+                        'controller': {
+                            'k_rho': self.controller.k_rho,
+                            'k_alpha': self.controller.k_alpha,
+                            'k_beta': self.controller.k_beta,
+                            'k_theta': self.controller.k_theta,
+                            'velocity_min': self.controller.velocity_min,
+                            'velocity_max': self.controller.velocity_max,
+                            'omega_min': self.controller.omega_min,
+                            'omega_max': self.controller.omega_max,
+                            'translation_tolerance': self.controller.translation_tolerance,
+                            'rotation_tolerance': self.controller.rotation_tolerance
+                        },
+                        'repeater': {
+                            'match_offset_radius': self.params.repeater.match_offset_radius,
+                            'along_path_radius': self.params.repeater.along_path_radius,
+                            'k_rotation': self.params.repeater.k_rotation,
+                            'k_along_path': self.params.repeater.k_along_path,
+                            'distance_threshold': self.params.repeater.distance_threshold,
+                            'angle_threshold': self.params.repeater.angle_threshold,
+                            'goal_advance_distance': self.params.repeater.goal_advance_distance
+                        }
+                    }, f)
             self.pause()
             return
 
@@ -362,13 +394,11 @@ class Repeater:
 录制:
     添加即时读写模式, 减轻内存负担. (完成)
         (若无将所有 raw_image 读入的情况, 占用内存实际上可以接受, e.g. 150x50 grayscale 2000 张约占 15 MB; 但录制过程中会出现所有 raw_image 在内存中的情况)
-    添加重复路线的记录, 用于比对.
+    添加重复路线的记录, 用于比对. (完成)
         要不拆分类型, 坐标序列和图像序列分别编写读写控制, 不再被绑定到 Recording 类.
             因为就这两种类型, 并且一个 Recording 中 odom 和 ground_truths, 以及两种 image 的处理都有一定重复性, 再考虑到 repeating 也要输出路径真值用以比对.
 控制器:
     [important] 修改 goal_controller, 减少目标平移对旋转指令的即时影响; 或许也可以增大 advance distance; 或许也有 rotation offset 估计跳变的原因.
-图形界面:
-    封装一下?
 控制:
     切换目标后的第一次估计暂时不发布为 goal; (完成, 效果貌似不明显)
     记录累积转向, 在大趋势上提前补偿; (感觉和增加 I 项类似)
@@ -386,6 +416,8 @@ class Repeater:
         把 P 改成 PD 或 PID (?)
     测试稀疏打点.
     修改控制器.
+    Repeater 本身参数也提取出来.
+    各 device 加一个 get_parameters_as_dict 方法方便存储.
 """
 
 # if self.first_image is None:
