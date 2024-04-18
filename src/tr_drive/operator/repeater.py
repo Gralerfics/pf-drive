@@ -184,7 +184,7 @@ class Repeater:
         # 起点对齐
         if self.global_locator_used and self.recording.is_ground_truths_available():
             self.global_locator.align_biased_odom_with_global(self.recording.odoms[self.get_passed_goal_index()], self.recording.ground_truths[self.get_passed_goal_index()])
-        
+
         # 发布路径
         biased_odom_frame_id = self.odometry.get_biased_odom_frame_id()
         self.debugger.publish('/recorded_odoms', self.recording.odoms.to_Path(frame_id = biased_odom_frame_id))
