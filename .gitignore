@@ -4,5 +4,6 @@ src/tr_drive/operator/__pycache__
 src/tr_drive/persistent/__pycache__
 src/tr_drive/sensor/__pycache__
 src/tr_drive/util/__pycache__
-worlds/.tb3_wbt.wbproj
-worlds/.tb3_wbt.jpg
+simulations/tb3_wbt/.tb3_wbt.wbproj
+simulations/tb3_wbt/.tb3_wbt.jpg
+# .vscode/

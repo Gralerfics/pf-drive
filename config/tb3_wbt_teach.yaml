@@ -1,4 +1,4 @@
-# roslaunch tr_drive tb3_teach.launch folder:="/home/gralerfics/MyFiles/Workspace/tr_data"
+# roslaunch tr_drive tb3_wbt_teach.launch folder:="/home/gralerfics/MyFiles/Workspace/tr_data"
 tr:
     camera:
         raw_image_topic: /tb3/camera/image
@@ -12,8 +12,8 @@ tr:
     global_locator:
         type: 'webots'
         fixed_frame_id: 'map'
+        supervisor_srv: 'tb3/supervisor'
         robot_def: 'tb3'
-        robot_name: 'tb3'
     teacher:
         save_raw_images: true
         save_ground_truth_odoms: true

@@ -26,6 +26,8 @@ dpg.create_context()
 dpg.create_viewport(title = 'repeater', width = 600, height = 400)
 dpg.setup_dearpygui()
 
+dpg.set_global_font_scale(1.2)
+
 processed_image_texture, passed_goal_image_texture, next_goal_image_texture = None, None, None
 
 def start_repeating_cb():

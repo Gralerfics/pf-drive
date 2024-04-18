@@ -18,7 +18,7 @@ from tr_drive.sensor.odometry import Odom
     几种类型:
         topic 类型需提供 topic, topic_type, odometry, fixed_frame;
         tf 类型需提供 odometry, fixed_frame;
-        webots 类型需提供 robot_def, robot_name, odometry, fixed_frame.
+        webots 类型需提供 robot_def, supervisor_srv, odometry, fixed_frame.
     传入时应保证 odometry 已 ready.
     
     register_x_hook():
@@ -77,12 +77,12 @@ class GlobalLocator:
             self.odometry.register_odom_received_hook(self.tf_type_cb)
         elif self.locator_type == self.LOCATOR_TYPE_WEBOTS:
             self.robot_def = self.params['robot_def']
-            self.robot_name = self.params['robot_name']
+            self.supervisor_srv = self.params['supervisor_srv']
             
             # 定义服务
-            SERVICE_GET_FROM_DEF = '/' + self.robot_name + '/supervisor/get_from_def'
-            SERVICE_GET_POSITION = '/' + self.robot_name + '/supervisor/node/get_position'
-            SERVICE_GET_ORIENTATION = '/' + self.robot_name + '/supervisor/node/get_orientation'
+            SERVICE_GET_FROM_DEF = self.supervisor_srv + '/get_from_def'
+            SERVICE_GET_POSITION = self.supervisor_srv + '/node/get_position'
+            SERVICE_GET_ORIENTATION = self.supervisor_srv + '/node/get_orientation'
             rospy.wait_for_service(SERVICE_GET_FROM_DEF)
             rospy.wait_for_service(SERVICE_GET_POSITION)
             rospy.wait_for_service(SERVICE_GET_ORIENTATION)

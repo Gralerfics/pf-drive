@@ -54,7 +54,7 @@ patch normalization 处理，后者订阅里程计 Odometry 数据，转为 Fram
 
 ---
 
-`worlds/`：Webots 场景文件。
+`simulations/`：仿真资源，例如 Webots 场景文件。
 
 ## Usages
 
@@ -69,19 +69,13 @@ roslaunch tr_drive tb3_wbt.launch [rviz:=false]
 启动 Teacher：
 
 ```
-roslaunch tr_drive tb3_teach.launch folder:="..." [name:='.../.auto'] [teleop_keyboard:=false]
-```
-
-启动 GMapping（可选）：
-
-```
-roslaunch tr_drive tb3_gmapping.launch
+roslaunch tr_drive tb3_teach_wbt.launch folder:="..." [name:='.../.auto'] [teleop_keyboard:=false]
 ```
 
 启动 Repeater：
 
 ```
-roslaunch tr_drive tb3_repeat.launch path:="..." [report:=".../.auto/.none"]
+roslaunch tr_drive tb3_repeat_wbt.launch path:="..." [report:=".../.auto/.none"]
 ```
 
 ### 评估

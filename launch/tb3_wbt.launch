@@ -4,7 +4,7 @@
     <include file="$(find webots_ros)/launch/webots.launch">
         <arg name="mode" value="realtime" />
         <arg name="no_gui" value="$(arg no_gui)" />
-        <arg name="world" value="$(find tr_drive)/worlds/tb3_wbt.wbt" />
+        <arg name="world" value="$(find tr_drive)/simulations/tb3_wbt/tb3_wbt.wbt" />
     </include>
 
     <!-- tb3 -->
@@ -32,6 +32,6 @@
 
     <!-- rviz -->
     <arg name="rviz" default="true" />
-    <arg name="rviz_config" default="$(find tr_drive)/rviz/tb3_wbt.rviz" />
+    <arg name="rviz_config" default="$(find tr_drive)/rviz/tr.rviz" />
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rviz_config)" if="$(arg rviz)" />
 </launch>

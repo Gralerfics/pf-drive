@@ -24,6 +24,8 @@ dpg.create_context()
 dpg.create_viewport(title = 'teacher', width = 600, height = 400)
 dpg.setup_dearpygui()
 
+dpg.set_global_font_scale(1.2)
+
 with dpg.texture_registry():
     dpg.add_dynamic_texture(
         width = teacher.camera.resize[0],

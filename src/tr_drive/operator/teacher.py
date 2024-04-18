@@ -90,8 +90,8 @@ class Teacher:
                     odometry = self.odometry,
                     fixed_frame_id = self.params.global_locator.fixed_frame_id,
                     
-                    robot_def = self.params.global_locator.robot_def,
-                    robot_name = self.params.global_locator.robot_name
+                    supervisor_srv = self.params.global_locator.supervisor_srv,
+                    robot_def = self.params.global_locator.robot_def
                 )
             self.params.remove('global_locator')
             self.global_locator.wait_until_ready()

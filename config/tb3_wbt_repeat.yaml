@@ -1,4 +1,4 @@
-# roslaunch tr_drive tb3_repeat.launch path:="/home/gralerfics/MyFiles/Workspace/tr_data/2024-02-12_17:55:53"
+# roslaunch tr_drive tb3_wbt_repeat.launch path:="/home/gralerfics/MyFiles/Workspace/tr_data/tb3_3"
 tr:
     camera:
         raw_image_topic: /tb3/camera/image
@@ -21,13 +21,13 @@ tr:
     global_locator:
         type: 'webots'
         fixed_frame_id: 'map'
+        supervisor_srv: 'tb3/supervisor'
         robot_def: 'tb3'
-        robot_name: 'tb3'
     repeater:
         match_offset_radius: 90 # px
         along_path_radius: 2
-        k_rotation: 0.06 # 0.06 # 0.01; [!] may be related to time step
-        k_along_path: 0.04 # 0.03
+        k_rotation: 0.04 # 0.06 # 0.01; [!] may be related to time step
+        k_along_path: 0.03 # 0.04 # 0.03
         distance_threshold: 0.01
         angle_threshold: 0.05
         goal_advance_distance: 0.2

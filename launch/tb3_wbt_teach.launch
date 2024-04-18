@@ -5,7 +5,7 @@
 
 	<param name="/tr/persistent/recording_folder" value="$(arg folder)" />
 	<param name="/tr/persistent/recording_name" value="$(arg name)" />
-	<rosparam file="$(find tr_drive)/config/tb3_teach.yaml" command="load" />
+	<rosparam file="$(find tr_drive)/config/tb3_wbt_teach.yaml" command="load" />
 
 	<node pkg="tr_drive" type="teacher_node.py" name="teacher" output="screen" />
 
