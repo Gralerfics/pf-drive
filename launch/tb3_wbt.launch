@@ -26,8 +26,11 @@
         </rosparam>
 		<node name="controller_spawner" pkg="controller_manager" type="spawner" output="screen" args="controller" />
 
+        <!-- dashboard -->
+	    <node pkg="tr_drive" type="tb3_wbt_dashboard_node.py" name="tb3_wbt_dashboard" output="screen" />
+
         <!-- rqt_controller_manager -->
-        <node name="rqt_controller_manager" pkg="rqt_controller_manager" type="rqt_controller_manager" output="screen" />
+        <!-- <node name="rqt_controller_manager" pkg="rqt_controller_manager" type="rqt_controller_manager" output="screen" /> -->
 	</group>
 
     <!-- rviz -->

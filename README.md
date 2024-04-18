@@ -112,4 +112,6 @@ self.params = DictRegulator(rospy.get_param('/tr'))
 
 读取参数服务器皆在 `operator` 中直接作为节点的脚本中，`Camera` 和 `Odom` 等的参数皆应依靠构造器传递。
 
-### TODO
+### 注意
+
+添加节点记得修改 CMakeLists.txt 并重新 catkin_make。

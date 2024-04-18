@@ -1,3 +1,3 @@
 dearpygui==1.10.1
-evo=1.26.1
+evo==1.26.1
 numpy==1.21.0
