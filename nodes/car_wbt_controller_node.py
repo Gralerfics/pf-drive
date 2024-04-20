@@ -51,9 +51,13 @@ spin_thread.start()
 
 last_time = wac.get_time()
 while not rospy.is_shutdown():
+    tmp_last_time = last_time
+
     current_time = wac.get_time()
-    dt = current_time - last_time
     last_time = current_time
+    if current_time is None or tmp_last_time is None:
+        continue
+    dt = current_time - tmp_last_time
 
     dist = cmd_v * dt
 
