@@ -29,7 +29,7 @@ class Repeater:
         self.launched = threading.Event()
         self.paused = threading.Event()
 
-        self.new_goal_passed = threading.Event()
+        # self.new_goal_passed = threading.Event()
         
         # public
         self.recording: Recording = None
@@ -224,7 +224,7 @@ class Repeater:
 
     def pass_to_next_goal(self):
         self.inc_passed_goal_index()
-        self.new_goal_passed.set()
+        # self.new_goal_passed.set()
         
         i = self.get_passed_goal_index()
         n = len(self.recording)
@@ -287,9 +287,12 @@ class Repeater:
         #     self.last_t = t
         #     self.n = 0
         
-        # t_odom = self.odometry.get_odom_msg().header.stamp.to_sec()
-        # t_current = time.time()
-        # print(f'{t_current - t_odom}')
+        # only use new odoms
+        t_odom = self.odometry.get_odom_msg().header.stamp.to_sec()
+        t_current = time.time()
+        # print(f'{t_odom} {t_current - t_odom}')
+        if t_current - t_odom > 0.1:
+            return
         
         i = self.get_passed_goal_index()
         n = len(self.recording)
@@ -320,7 +323,7 @@ class Repeater:
             scan_indices = np.clip(list(range(i - r + 1, i + r + 1)), 0, n - 1).tolist()
             scan_distances = np.array([self.goal_distances[idx] for idx in scan_indices]) - self.goal_distances[i] - d_p_ac # c 处为 0
             scan_offsets, scan_values = self.batched_match(self.camera.get_processed_image(), scan_indices)
-            scan_values[scan_values < 0.1] = 0 # TODO, threshold
+            scan_values[scan_values < min(0.1, scan_values.min() / 2)] = 0 # TODO, threshold 当前随便设置的, 理应表示 NCC 底噪; 如果全都被滤除说明两图差距已经很大, 也许可以作为确认丢失的一种条件; 最小值除二仅为防止崩溃, 无实际意义.
             delta_p = scan_values / scan_values.sum() @ scan_distances
             delta_distance = self.params.repeater.k_along_path * delta_p # np.clip((d_cb - delta_distance) / d_cb, scan_distances[0], scan_distances[-1])
             along_path_correction = (d_cb - delta_distance) / d_cb
@@ -330,9 +333,10 @@ class Repeater:
             #     # print('along_path_correction > 1.0')
             #     return
 
+            # rospy.loginfo(f'{d_p_ac}, {d_ab}, {u}')
             if u > 1.0 - 1e-2: # 投影点到达下个目标
                 self.pass_to_next_goal()
-                # print('u -> 1.0')
+                print('u -> 1.0')
                 return
 
             # rotation correction
@@ -362,32 +366,32 @@ class Repeater:
             self.repeat_ground_truth_odoms.append(self.global_locator.get_global_frame())
 
         # goal
-        if not self.new_goal_passed.is_set():
-            delta = T_0c.I * self.T_0b
-            if delta.t.norm() < self.params.repeater.distance_threshold or turning_goal:
-                if abs(delta.q.Euler[2]) < self.params.repeater.angle_threshold:
-                    self.pass_to_next_goal() # 里程计反馈到达设定的目标
-                    # print('in tolerance')
-                    return
-                else:
-                    goal_advanced = self.T_0b
+        # if not self.new_goal_passed.is_set():
+        delta = T_0c.I * self.T_0b
+        if delta.t.norm() < self.params.repeater.distance_threshold or turning_goal:
+            if abs(delta.q.Euler[2]) < self.params.repeater.angle_threshold:
+                self.pass_to_next_goal() # 里程计反馈到达设定的目标
+                print('in tolerance')
+                return
             else:
-                goal_advanced = self.T_0b * Frame.from_translation(Vec3(self.params.repeater.goal_advance_distance, 0, 0))
-            
-            biased_odom_frame_id = self.odometry.get_biased_odom_frame_id()
-            self.debugger.publish('/a', self.T_0a.to_PoseStamped(frame_id = biased_odom_frame_id))
-            self.debugger.publish('/b', self.T_0b.to_PoseStamped(frame_id = biased_odom_frame_id))
-            self.debugger.publish('/r', self.odometry.get_biased_odom().to_PoseStamped(frame_id = biased_odom_frame_id))
-
-            if self.global_locator_used:
-                aligned_map_frame_id = self.global_locator.get_aligned_global_frame_id()
-                self.debugger.publish('/a_gt', self.recording.ground_truths[i].to_PoseStamped(frame_id = aligned_map_frame_id))
-                if i < len(self.recording) - 1:
-                    self.debugger.publish('/b_gt', self.recording.ground_truths[i + 1].to_PoseStamped(frame_id = aligned_map_frame_id))
-            
-            self.controller.set_goal(goal_advanced)
+                goal_advanced = self.T_0b
         else:
-            self.new_goal_passed.clear()
+            goal_advanced = self.T_0b * Frame.from_translation(Vec3(self.params.repeater.goal_advance_distance, 0, 0))
+        
+        biased_odom_frame_id = self.odometry.get_biased_odom_frame_id()
+        self.debugger.publish('/a', self.T_0a.to_PoseStamped(frame_id = biased_odom_frame_id))
+        self.debugger.publish('/b', self.T_0b.to_PoseStamped(frame_id = biased_odom_frame_id))
+        self.debugger.publish('/r', self.odometry.get_biased_odom().to_PoseStamped(frame_id = biased_odom_frame_id))
+
+        if self.global_locator_used:
+            aligned_map_frame_id = self.global_locator.get_aligned_global_frame_id()
+            self.debugger.publish('/a_gt', self.recording.ground_truths[i].to_PoseStamped(frame_id = aligned_map_frame_id))
+            if i < len(self.recording) - 1:
+                self.debugger.publish('/b_gt', self.recording.ground_truths[i + 1].to_PoseStamped(frame_id = aligned_map_frame_id))
+        
+        self.controller.set_goal(goal_advanced)
+        # else:
+        #     self.new_goal_passed.clear()
 
 
 """ TODO ideas

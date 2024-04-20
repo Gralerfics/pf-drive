@@ -51,6 +51,7 @@ spin_thread.start()
 
 last_time = wac.get_time()
 while not rospy.is_shutdown():
+    # TODO: reset 后指令保持导致累加
     tmp_last_time = last_time
 
     current_time = wac.get_time()
@@ -75,7 +76,13 @@ while not rospy.is_shutdown():
         odom_frame.quaternion = rot * odom_frame.q
         odom_frame.translation = odom_frame.t + PT
 
-    pub_odom.publish(odom_frame.to_Odometry(frame_id = 'odom'))
+    # TODO: fix the situation where the values are nan. 看起来问题不在这里，是传入的数据已经 nan.
+    if odom_frame.translation.has_nan() or odom_frame.quaternion.has_nan():
+        Debugger.error('Nan value detected in odom_frame. Breaking the loop.')
+        break
+
+    pub_odom.publish(odom_frame.to_Odometry(frame_id = 'odom', time_stamp = rospy.Time.now()))
+    # rospy.loginfo(rospy.Time.now().to_sec())
     tf_broadcaster.sendTransform(
         odom_frame.t.to_list(),
         odom_frame.q.to_list(),

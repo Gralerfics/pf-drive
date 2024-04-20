@@ -54,6 +54,9 @@ class Vec3:
     def to_np(self):
         return np.array([self.x, self.y, self.z])
     
+    def has_nan(self):
+        return np.isnan(self.x) or np.isnan(self.y) or np.isnan(self.z)
+    
     def dot(self, other: 'Vec3'):
         return self.x * other.x + self.y * other.y + self.z * other.z
     
@@ -191,6 +194,9 @@ class Quat:
         n = Vec3([x, y, z]).normalize()
         return n * theta
     
+    def has_nan(self):
+        return np.isnan(self.x) or np.isnan(self.y) or np.isnan(self.z) or np.isnan(self.w)
+    
     def validate(self):
         return abs(self.norm() - 1) < 1e-6
 
@@ -304,9 +310,11 @@ class Frame:
         msg.pose = self.to_Pose()
         return msg
     
-    def to_Odometry(self, frame_id = ''):
+    def to_Odometry(self, frame_id = '', time_stamp = None):
         msg = Odometry()
         msg.header.frame_id = frame_id
+        if time_stamp is not None:
+            msg.header.stamp = time_stamp
         msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z = self.translation.to_list()
         msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w = self.quaternion.to_list()
         return msg

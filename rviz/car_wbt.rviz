@@ -4,10 +4,10 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /Odometry1
+        - /Global Options1
         - /Odometry1/Shape1
       Splitter Ratio: 0.5714285969734192
-    Tree Height: 445
+    Tree Height: 604
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -58,6 +58,8 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
+        aligned_map:
+          Value: true
         appearance:
           Value: false
         appearance_0:
@@ -90,14 +92,18 @@ Visualization Manager:
           Value: false
         base_link:
           Value: true
+        biased_odom:
+          Value: true
         body:
           Value: false
         camera:
-          Value: true
+          Value: false
         left_front_wheel:
           Value: false
         left_rear_wheel:
           Value: false
+        map:
+          Value: true
         odom:
           Value: true
         right_front_wheel:
@@ -121,24 +127,29 @@ Visualization Manager:
             {}
           appearance_9:
             {}
-        odom:
-          base_link:
-            appearance:
+        map:
+          aligned_map:
+            {}
+          odom:
+            base_link:
+              appearance:
+                {}
+              appearance_0:
+                {}
+              appearance_1:
+                {}
+              body:
+                appearance_2:
+                  {}
+                appearance_3:
+                  {}
+                appearance_4:
+                  {}
+              camera:
+                appearance_13:
+                  {}
+            biased_odom:
               {}
-            appearance_0:
-              {}
-            appearance_1:
-              {}
-            body:
-              appearance_2:
-                {}
-              appearance_3:
-                {}
-              appearance_4:
-                {}
-            camera:
-              appearance_13:
-                {}
         right_front_wheel:
           appearance_7:
             {}
@@ -178,7 +189,7 @@ Visualization Manager:
           Scale: 1
           Value: true
         Value: false
-      Enabled: true
+      Enabled: false
       Keep: 1000
       Name: Odometry
       Position Tolerance: 0.05999999865889549
@@ -195,7 +206,7 @@ Visualization Manager:
         Value: Axes
       Topic: /car/odom
       Unreliable: false
-      Value: true
+      Value: false
     - Class: rviz/Image
       Enabled: false
       Image Topic: /car/camera/image
@@ -214,12 +225,12 @@ Visualization Manager:
       Class: rviz/Pose
       Color: 255; 25; 0
       Enabled: true
-      Head Length: 0.029999999329447746
-      Head Radius: 0.029999999329447746
+      Head Length: 0.4000000059604645
+      Head Radius: 0.44999998807907104
       Name: Goal
       Queue Size: 10
-      Shaft Length: 0.05000000074505806
-      Shaft Radius: 0.019999999552965164
+      Shaft Length: 1.2000000476837158
+      Shaft Radius: 0.25
       Shape: Arrow
       Topic: /goal
       Unreliable: false
@@ -233,7 +244,7 @@ Visualization Manager:
       Head Length: 0.20000000298023224
       Length: 0.30000001192092896
       Line Style: Billboards
-      Line Width: 0.009999999776482582
+      Line Width: 0.20000000298023224
       Name: Rec_Odoms
       Offset:
         X: 0
@@ -257,7 +268,7 @@ Visualization Manager:
       Head Length: 0.20000000298023224
       Length: 0.30000001192092896
       Line Style: Billboards
-      Line Width: 0.009999999776482582
+      Line Width: 0.20000000298023224
       Name: Rec_GTs
       Offset:
         X: 0
@@ -273,8 +284,8 @@ Visualization Manager:
       Unreliable: false
       Value: true
     - Alpha: 1
-      Axes Length: 0.15000000596046448
-      Axes Radius: 0.00800000037997961
+      Axes Length: 2
+      Axes Radius: 0.10000000149011612
       Class: rviz/Pose
       Color: 255; 25; 0
       Enabled: true
@@ -289,8 +300,8 @@ Visualization Manager:
       Unreliable: false
       Value: true
     - Alpha: 1
-      Axes Length: 0.05000000074505806
-      Axes Radius: 0.00800000037997961
+      Axes Length: 1.2000000476837158
+      Axes Radius: 0.10000000149011612
       Class: rviz/Pose
       Color: 255; 25; 0
       Enabled: true
@@ -305,8 +316,8 @@ Visualization Manager:
       Unreliable: false
       Value: true
     - Alpha: 1
-      Axes Length: 0.10000000149011612
-      Axes Radius: 0.00800000037997961
+      Axes Length: 1.600000023841858
+      Axes Radius: 0.10000000149011612
       Class: rviz/Pose
       Color: 255; 25; 0
       Enabled: true
@@ -321,8 +332,8 @@ Visualization Manager:
       Unreliable: false
       Value: true
     - Alpha: 1
-      Axes Length: 0.05000000074505806
-      Axes Radius: 0.00800000037997961
+      Axes Length: 2
+      Axes Radius: 0.20000000298023224
       Class: rviz/Pose
       Color: 255; 25; 0
       Enabled: true
@@ -337,8 +348,8 @@ Visualization Manager:
       Unreliable: false
       Value: true
     - Alpha: 1
-      Axes Length: 0.05000000074505806
-      Axes Radius: 0.00800000037997961
+      Axes Length: 2
+      Axes Radius: 0.20000000298023224
       Class: rviz/Pose
       Color: 255; 25; 0
       Enabled: true
@@ -356,7 +367,7 @@ Visualization Manager:
   Global Options:
     Background Color: 48; 48; 48
     Default Light: true
-    Fixed Frame: odom
+    Fixed Frame: map
     Frame Rate: 30
   Name: root
   Tools:
@@ -380,7 +391,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 33.30217742919922
+      Distance: 45.51926803588867
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -388,27 +399,27 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 7.632090091705322
-        Y: -0.9395485520362854
-        Z: 0.045285552740097046
+        X: -6.814972400665283
+        Y: 34.6401481628418
+        Z: -1.7470028400421143
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.2597967386245728
+      Pitch: 0.7097974419593811
       Target Frame: <Fixed Frame>
-      Yaw: 3.931756019592285
+      Yaw: 1.1967576742172241
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 929
+  Height: 1088
   Hide Left Dock: false
   Hide Right Dock: false
   Image:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd0000000400000000000003350000022bfc0200000009fb0000001200530065006c0065006300740069006f006e00000001e10000009b000000b000fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000b0fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000006e0000022b0000018200fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d006100670065000000023f0000005a0000002600ffffff00000001000001bf0000022bfc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073010000006e0000022b0000013200fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e100000197000000030000077d000000cefc0100000002fb0000000800540069006d006501000000000000077d000006dc00fffffffb0000000800540069006d00650100000000000004500000000000000000000002710000022b00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd000000040000000000000261000002cafc0200000009fb0000001200530065006c0065006300740069006f006e00000001e10000009b000000b000fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000b0fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000006e000002ca0000018200fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0049006d006100670065000000023f0000005a0000002600ffffff00000001000001bf000002cafc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073010000006e000002ca0000013200fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e100000197000000030000077d000000cefc0100000002fb0000000800540069006d006501000000000000077d000006dc00fffffffb0000000800540069006d0065010000000000000450000000000000000000000345000002ca00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -418,5 +429,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1917
-  X: 1819
+  X: 1923
   Y: 54

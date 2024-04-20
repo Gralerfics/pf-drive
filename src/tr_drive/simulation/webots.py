@@ -96,6 +96,7 @@ class WebotsRotationalMotorController:
     INFINITY = float('inf')
 
     def __init__(self, motor_name, namespace = ''):
+        # TODO: service reset when resetting simulation. 不过看起来服务句柄不会丢失.
         self.SERVICE_SET_POSITION = namespace + '/' + motor_name + '/set_position'
         self.SERVICE_SET_VELOCITY = namespace + '/' + motor_name + '/set_velocity'
         self.SERVICE_SET_TORQUE = namespace + '/' + motor_name + '/set_torque'

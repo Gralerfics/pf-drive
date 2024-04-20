@@ -13,9 +13,9 @@ tr:
         k_beta: -0.5 # -3.0 # k beta < 0
         k_theta: 4.0 # 7.0
         velocity_min: 0.0
-        velocity_max: 0.2
+        velocity_max: 3.0
         omega_min: 0.15
-        omega_max: 0.93 # TODO
+        omega_max: 0.78 # TODO
         translation_tolerance: 0.05
         rotation_tolerance: 0.1
     global_locator:
@@ -26,8 +26,8 @@ tr:
     repeater:
         match_offset_radius: 90 # px
         along_path_radius: 2
-        k_rotation: 0.04 # 0.06 # 0.01; [!] may be related to time step
-        k_along_path: 0.03 # 0.04 # 0.03
-        distance_threshold: 0.01
-        angle_threshold: 0.05
-        goal_advance_distance: 0.2
+        k_rotation: 0.04 # 0.04
+        k_along_path: 0.05 # 0.03
+        distance_threshold: 0.2
+        angle_threshold: 0.1 # 0.05
+        goal_advance_distance: 2.0
