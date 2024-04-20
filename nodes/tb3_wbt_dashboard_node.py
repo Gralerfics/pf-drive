@@ -7,7 +7,7 @@ import rospy
 
 import dearpygui.dearpygui as dpg
 
-from tr_drive.simulation.webots import WebotsDashboard
+from tr_drive.simulation.webots import WebotsDashboardWithROSControl
 
 
 def spin_func():
@@ -15,7 +15,7 @@ def spin_func():
     dpg.destroy_context()
 
 rospy.init_node('tr_tb3_wbt_dashboard', anonymous = False)
-dashboard = WebotsDashboard('/tb3/supervisor', '/tb3/controller_manager', 'controller')
+dashboard = WebotsDashboardWithROSControl('/tb3/supervisor', '/tb3/controller_manager', 'controller')
 spin_thread = threading.Thread(target = spin_func)
 spin_thread.start()
 

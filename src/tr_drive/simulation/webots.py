@@ -1,15 +1,18 @@
 import threading
 import time
 
+import numpy as np
+
 import rospy
 
 from webots_ros.srv import get_bool, get_boolRequest, get_boolResponse
+from webots_ros.srv import set_float, set_floatRequest, set_floatResponse
 from controller_manager_msgs.srv import LoadController, LoadControllerRequest, LoadControllerResponse, UnloadController, UnloadControllerRequest, UnloadControllerResponse, SwitchController, SwitchControllerRequest, SwitchControllerResponse
 
 import dearpygui.dearpygui as dpg
 
 
-class WebotsDashboard:
+class WebotsDashboardWithROSControl:
     def __init__(self, supervisor_srv = '/supervisor', controller_mgr_srv = '/controller_manager', controller_name = 'controller'):
         # private
         self.ready = threading.Event()
@@ -86,4 +89,90 @@ class WebotsDashboard:
         self.unload_controller()
         self.load_controller()
         self.start_controller()
+
+
+class WebotsRotationalMotorController:
+    INFINITY = float('inf')
+
+    def __init__(self, motor_name, namespace = ''):
+        self.SERVICE_SET_POSITION = namespace + '/' + motor_name + '/set_position'
+        self.SERVICE_SET_VELOCITY = namespace + '/' + motor_name + '/set_velocity'
+        self.SERVICE_SET_TORQUE = namespace + '/' + motor_name + '/set_torque'
+        rospy.wait_for_service(self.SERVICE_SET_POSITION)
+        rospy.wait_for_service(self.SERVICE_SET_VELOCITY)
+        rospy.wait_for_service(self.SERVICE_SET_TORQUE)
+        self.srv_set_position = rospy.ServiceProxy(self.SERVICE_SET_POSITION, set_float)
+        self.srv_set_velocity = rospy.ServiceProxy(self.SERVICE_SET_VELOCITY, set_float)
+        self.srv_set_torque = rospy.ServiceProxy(self.SERVICE_SET_TORQUE, set_float)
+    
+    def set_position(self, position):
+        try:
+            request = set_floatRequest(value = position)
+            response = self.srv_set_position(request)
+        except rospy.ServiceException as e:
+            rospy.logerr('Set position failed: %s' % e)
+    
+    def set_velocity(self, velocity):
+        try:
+            self.set_position(self.INFINITY)
+            request = set_floatRequest(value = velocity)
+            response = self.srv_set_velocity(request)
+        except rospy.ServiceException as e:
+            rospy.logerr('Set velocity failed: %s' % e)
+    
+    def set_torque(self, torque):
+        try:
+            request = set_floatRequest(value = torque)
+            response = self.srv_set_torque(request)
+        except rospy.ServiceException as e:
+            rospy.logerr('Set torque failed: %s' % e)
+
+
+class WebotsAckermannController:
+    def __init__(self,
+        left_front_steer_motor_name, # = 'left_front_steer_motor',
+        right_front_steer_motor_name, # = 'right_front_steer_motor',
+        left_rear_motor_name, # = 'left_rear_motor',
+        right_rear_motor_name, # = 'right_rear_motor',
+        l, # = 1.628, # 轮间距
+        d, # = 2.995, # 前后轴距
+        r, # = 0.38, # 轮半径
+        max_phi, # 0.78, # 单轮最大转角
+        namespace = '' # = 'car/'
+    ):
+        # parameters
+        self.l = l
+        self.d = d
+        self.r = r
+        self.max_phi = max_phi
+
+        # motors
+        self.left_front_steer_motor = WebotsRotationalMotorController(left_front_steer_motor_name, namespace)
+        self.right_front_steer_motor = WebotsRotationalMotorController(right_front_steer_motor_name, namespace)
+        self.left_rear_motor = WebotsRotationalMotorController(left_rear_motor_name, namespace)
+        self.right_rear_motor = WebotsRotationalMotorController(right_rear_motor_name, namespace)
+
+    def command(self, v, w, try_best_w):
+        sgn = np.sign(v + 1e-3) * np.sign(w + 1e-3)
+        
+        R_min = sgn * (self.d / np.tan(self.max_phi) + self.l / 2)
+        R = float('inf') if abs(w) < 1e-3 else v / w
+
+        if abs(R) < abs(R_min):
+            if not try_best_w:
+                rospy.logerr('Invalid command: v = %f, w = %f' % (v, w))
+                return
+            R = R_min
+        
+        rospy.loginfo(R)
+        
+        phi_l = np.arctan(self.d / (R + self.l / 2))
+        phi_r = np.arctan(self.d / (R - self.l / 2))
+
+        w_rear = v / self.r
+
+        self.left_front_steer_motor.set_position(phi_l)
+        self.right_front_steer_motor.set_position(phi_r)
+        self.left_rear_motor.set_velocity(w_rear)
+        self.right_rear_motor.set_velocity(w_rear)
 

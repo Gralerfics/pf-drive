@@ -175,6 +175,7 @@ catkin_install_python(PROGRAMS
 	nodes/teacher_node.py
 	nodes/repeater_node.py
 	nodes/tb3_wbt_dashboard_node.py
+	nodes/car_wbt_controller_node.py
 	
 	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

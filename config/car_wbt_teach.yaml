@@ -1,0 +1,21 @@
+# roslaunch tr_drive tb3_wbt_teach.launch folder:="/home/gralerfics/MyFiles/Workspace/tr_data"
+tr:
+    camera:
+        raw_image_topic: /car/camera/image
+        patch_size: 15
+        resize: [150, 50] # [width, height]
+        horizontal_fov: 114.59 # degree
+        processed_image_topic: /tr/camera/processed_image # debug
+    odometry:
+        odom_topic: /car/odom
+        processed_odom_topic: /tr/odometry/processed_odom # debug
+    global_locator:
+        type: 'webots'
+        fixed_frame_id: 'map'
+        supervisor_srv: 'car/supervisor'
+        robot_def: 'car'
+    teacher:
+        save_raw_images: true
+        save_ground_truth_odoms: true
+        rotation_threshold: 0.26 # 0.08 # rad
+        translation_threshold: 0.25 # 0.04 # m
