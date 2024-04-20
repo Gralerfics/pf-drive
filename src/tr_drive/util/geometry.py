@@ -158,6 +158,8 @@ class Quat:
     @staticmethod
     def from_rotation_vector(v: Vec3):
         theta = v.norm()
+        if theta < 1e-6:
+            return Quat(0, 0, 0, 1)
         n = v.normalize()
         return Quat(n.x * np.sin(theta / 2), n.y * np.sin(theta / 2), n.z * np.sin(theta / 2), np.cos(theta / 2))
     

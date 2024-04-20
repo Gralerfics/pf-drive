@@ -35,6 +35,6 @@
 
     <!-- rviz -->
     <arg name="rviz" default="true" />
-    <arg name="rviz_config" default="$(find tr_drive)/rviz/tr.rviz" />
+    <arg name="rviz_config" default="$(find tr_drive)/rviz/tb3_wbt.rviz" />
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rviz_config)" if="$(arg rviz)" />
 </launch>

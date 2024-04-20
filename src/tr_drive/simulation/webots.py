@@ -6,6 +6,7 @@ import numpy as np
 import rospy
 
 from webots_ros.srv import get_bool, get_boolRequest, get_boolResponse
+from webots_ros.srv import get_float, get_floatRequest, get_floatResponse
 from webots_ros.srv import set_float, set_floatRequest, set_floatResponse
 from controller_manager_msgs.srv import LoadController, LoadControllerRequest, LoadControllerResponse, UnloadController, UnloadControllerRequest, UnloadControllerResponse, SwitchController, SwitchControllerRequest, SwitchControllerResponse
 
@@ -138,7 +139,7 @@ class WebotsAckermannController:
         d, # = 2.995, # 前后轴距
         r, # = 0.38, # 轮半径
         max_phi, # 0.78, # 单轮最大转角
-        namespace = '' # = 'car/'
+        namespace = '' # = '/car'
     ):
         # parameters
         self.l = l
@@ -152,7 +153,20 @@ class WebotsAckermannController:
         self.left_rear_motor = WebotsRotationalMotorController(left_rear_motor_name, namespace)
         self.right_rear_motor = WebotsRotationalMotorController(right_rear_motor_name, namespace)
 
-    def command(self, v, w, try_best_w):
+        # services
+        self.SERVICE_ROBOT_GET_TIME = namespace + '/robot/get_time'
+        rospy.wait_for_service(self.SERVICE_ROBOT_GET_TIME)
+        self.srv_robot_get_time = rospy.ServiceProxy(self.SERVICE_ROBOT_GET_TIME, get_float)
+    
+    def get_time(self):
+        try:
+            request = get_floatRequest(0)
+            response = self.srv_robot_get_time(request)
+            return response.value
+        except rospy.ServiceException as e:
+            rospy.logerr('Get time failed: %s' % e)
+
+    def command(self, v, w, try_best_w): # return v, R
         sgn = np.sign(v + 1e-3) * np.sign(w + 1e-3)
         
         R_min = sgn * (self.d / np.tan(self.max_phi) + self.l / 2)
@@ -161,10 +175,8 @@ class WebotsAckermannController:
         if abs(R) < abs(R_min):
             if not try_best_w:
                 rospy.logerr('Invalid command: v = %f, w = %f' % (v, w))
-                return
+                return 0, R_min
             R = R_min
-        
-        rospy.loginfo(R)
         
         phi_l = np.arctan(self.d / (R + self.l / 2))
         phi_r = np.arctan(self.d / (R - self.l / 2))
@@ -175,4 +187,6 @@ class WebotsAckermannController:
         self.right_front_steer_motor.set_position(phi_r)
         self.left_rear_motor.set_velocity(w_rear)
         self.right_rear_motor.set_velocity(w_rear)
+
+        return v, R
 

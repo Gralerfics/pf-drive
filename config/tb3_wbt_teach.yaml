@@ -12,7 +12,7 @@ tr:
     global_locator:
         type: 'webots'
         fixed_frame_id: 'map'
-        supervisor_srv: 'tb3/supervisor'
+        supervisor_srv: '/tb3/supervisor'
         robot_def: 'tb3'
     teacher:
         save_raw_images: true

@@ -1,10 +1,12 @@
 import threading
 
 import rospy
+import tf
 from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
 
 from tr_drive.util.debug import Debugger
-from tr_drive.util.geometry import Frame
+from tr_drive.util.geometry import Frame, Vec3, Quat
 from tr_drive.simulation.webots import WebotsAckermannController
 
 
@@ -22,24 +24,59 @@ wac = WebotsAckermannController(
     '/car'
 )
 
-cmd_linear = 0.0
-cmd_angular = 0.0
+cmd_v = 0.0
+cmd_R = 1e9
+odom_frame = Frame()
 
 
 def cmd_vel_received(msg):
-    cmd_linear = msg.linear.x
-    cmd_angular = msg.angular.z
-    rospy.loginfo('cmd_vel_received: linear = %f, angular = %f' % (cmd_linear, cmd_angular))
-    wac.command(cmd_linear, cmd_angular, try_best_w = True)
+    global cmd_v, cmd_R
+    cmd_v, cmd_R = wac.command(msg.linear.x, msg.angular.z, try_best_w = True)
 
 
 sub_cmd_vel = rospy.Subscriber('/car/cmd_vel', Twist, cmd_vel_received)
-pub_odom = rospy.Publisher('/car/odom', Twist, queue_size = 1)
+pub_odom = rospy.Publisher('/car/odom', Odometry, queue_size = 1)
+
+tf_broadcaster = tf.TransformBroadcaster()
+tf_broadcaster.sendTransform(
+    [0, 0, 0],
+    [0, 0, 0, 1],
+    rospy.Time.now(),
+    'base_link',
+    'odom'
+)
 
 spin_thread = threading.Thread(target = rospy.spin)
 spin_thread.start()
 
+last_time = wac.get_time()
 while not rospy.is_shutdown():
-    import time
-    time.sleep(1)
+    current_time = wac.get_time()
+    dt = current_time - last_time
+    last_time = current_time
+
+    dist = cmd_v * dt
+
+    if cmd_R > 1e9: # inf
+        odom_frame.translation += odom_frame.q.rotate(Vec3(dist, 0, 0))
+    else:
+        theta = dist / cmd_R
+        rot = Quat.from_rotation_vector(Vec3(0, 0, theta))
+
+        # P: robot, O: origin, R: instantaneous center of rotation, T: target of P
+        PR = odom_frame.q.rotate(Vec3(0, cmd_R, 0))
+        RT = -rot.rotate(PR)
+        PT = PR + RT
+
+        odom_frame.quaternion = rot * odom_frame.q
+        odom_frame.translation = odom_frame.t + PT
+
+    pub_odom.publish(odom_frame.to_Odometry(frame_id = 'odom'))
+    tf_broadcaster.sendTransform(
+        odom_frame.t.to_list(),
+        odom_frame.q.to_list(),
+        rospy.Time.now(),
+        'base_link',
+        'odom'
+    )
 
