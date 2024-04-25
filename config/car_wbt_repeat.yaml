@@ -8,14 +8,14 @@ tr:
         processed_odom_topic: /tr/odometry/processed_odom # debug
     controller:
         cmd_vel_topic: /car/cmd_vel
-        k_rho: 0.45 # 0.5 # k_rho > 0
-        k_alpha: 2.0 # 5.0 # k_alpha > k_rho
-        k_beta: -0.5 # -3.0 # k beta < 0
-        k_theta: 4.0 # 7.0
+        k_rho: 0.35 # 0.5 # k_rho > 0
+        k_alpha: 0.3 # 5.0 # 0.05 # k_alpha > k_rho
+        k_beta: -1.0 # -3.0 # -0.6 # k beta < 0
+        k_theta: 4.0 # 7.0 # 5.0
         velocity_min: 0.0
-        velocity_max: 3.0
-        omega_min: 0.15
-        omega_max: 0.78 # TODO
+        velocity_max: 3.5
+        omega_min: 0.0
+        omega_max: 0.35 # 0.78
         translation_tolerance: 0.05
         rotation_tolerance: 0.1
     global_locator:
@@ -26,8 +26,8 @@ tr:
     repeater:
         match_offset_radius: 90 # px
         along_path_radius: 2
-        k_rotation: 0.04 # 0.04
-        k_along_path: 0.05 # 0.03
+        k_rotation: 0.06 # 0.04
+        k_along_path: 0.1 # 0.03
         distance_threshold: 0.2
         angle_threshold: 0.1 # 0.05
-        goal_advance_distance: 2.0
+        goal_advance_distance: 10.0

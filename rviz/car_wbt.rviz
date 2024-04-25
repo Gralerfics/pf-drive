@@ -4,7 +4,7 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /Global Options1
+        - /TF1/Frames1
         - /Odometry1/Shape1
       Splitter Ratio: 0.5714285969734192
     Tree Height: 604
@@ -336,7 +336,7 @@ Visualization Manager:
       Axes Radius: 0.20000000298023224
       Class: rviz/Pose
       Color: 255; 25; 0
-      Enabled: true
+      Enabled: false
       Head Length: 0.30000001192092896
       Head Radius: 0.10000000149011612
       Name: A_gt
@@ -346,13 +346,13 @@ Visualization Manager:
       Shape: Axes
       Topic: /a_gt
       Unreliable: false
-      Value: true
+      Value: false
     - Alpha: 1
       Axes Length: 2
       Axes Radius: 0.20000000298023224
       Class: rviz/Pose
       Color: 255; 25; 0
-      Enabled: true
+      Enabled: false
       Head Length: 0.30000001192092896
       Head Radius: 0.10000000149011612
       Name: B_gt
@@ -362,7 +362,7 @@ Visualization Manager:
       Shape: Axes
       Topic: /b_gt
       Unreliable: false
-      Value: true
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -391,7 +391,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 45.51926803588867
+      Distance: 47.41511535644531
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1

@@ -275,17 +275,17 @@ class Repeater:
         if not self.is_ready() or not self.launched.is_set() or self.paused.is_set():
             return
 
-        # if not hasattr(self, 'last_t'):
-        #     self.last_t = time.time()
-        # if not hasattr(self, 'n'):
-        #     self.n = 0
-        # else:
-        #     self.n += 1
-        # t = time.time()
-        # if t - self.last_t > 2.0:
-        #     print(f'fps: {self.n / (t - self.last_t)}')
-        #     self.last_t = t
-        #     self.n = 0
+        if not hasattr(self, 'last_t'):
+            self.last_t = time.time()
+        if not hasattr(self, 'n'):
+            self.n = 0
+        else:
+            self.n += 1
+        t = time.time()
+        if t - self.last_t > 2.0:
+            print(f'fps: {self.n / (t - self.last_t)}')
+            self.last_t = t
+            self.n = 0
         
         # only use new odoms
         t_odom = self.odometry.get_odom_msg().header.stamp.to_sec()
@@ -336,7 +336,7 @@ class Repeater:
             # rospy.loginfo(f'{d_p_ac}, {d_ab}, {u}')
             if u > 1.0 - 1e-2: # 投影点到达下个目标
                 self.pass_to_next_goal()
-                print('u -> 1.0')
+                # print('u -> 1.0')
                 return
 
             # rotation correction
@@ -364,6 +364,8 @@ class Repeater:
         # report, TODO: 参数控制暂略, 此处将保存数据, 最终输出一个 tum 标准的路径文件
         if self.save_report:
             self.repeat_ground_truth_odoms.append(self.global_locator.get_global_frame())
+        
+        # print(f'rot_c: {rotation_correction}; ap_c: {along_path_correction}\n')
 
         # goal
         # if not self.new_goal_passed.is_set():
@@ -371,23 +373,24 @@ class Repeater:
         if delta.t.norm() < self.params.repeater.distance_threshold or turning_goal:
             if abs(delta.q.Euler[2]) < self.params.repeater.angle_threshold:
                 self.pass_to_next_goal() # 里程计反馈到达设定的目标
-                print('in tolerance')
+                # print('in tolerance')
                 return
             else:
                 goal_advanced = self.T_0b
         else:
             goal_advanced = self.T_0b * Frame.from_translation(Vec3(self.params.repeater.goal_advance_distance, 0, 0))
+            # goal_advanced = self.T_0b * Frame.from_translation(delta.t.normalize() * self.params.repeater.goal_advance_distance)
         
         biased_odom_frame_id = self.odometry.get_biased_odom_frame_id()
         self.debugger.publish('/a', self.T_0a.to_PoseStamped(frame_id = biased_odom_frame_id))
         self.debugger.publish('/b', self.T_0b.to_PoseStamped(frame_id = biased_odom_frame_id))
         self.debugger.publish('/r', self.odometry.get_biased_odom().to_PoseStamped(frame_id = biased_odom_frame_id))
 
-        if self.global_locator_used:
-            aligned_map_frame_id = self.global_locator.get_aligned_global_frame_id()
-            self.debugger.publish('/a_gt', self.recording.ground_truths[i].to_PoseStamped(frame_id = aligned_map_frame_id))
-            if i < len(self.recording) - 1:
-                self.debugger.publish('/b_gt', self.recording.ground_truths[i + 1].to_PoseStamped(frame_id = aligned_map_frame_id))
+        # if self.global_locator_used:
+        #     aligned_map_frame_id = self.global_locator.get_aligned_global_frame_id()
+        #     self.debugger.publish('/a_gt', self.recording.ground_truths[i].to_PoseStamped(frame_id = aligned_map_frame_id))
+        #     if i < len(self.recording) - 1:
+        #         self.debugger.publish('/b_gt', self.recording.ground_truths[i + 1].to_PoseStamped(frame_id = aligned_map_frame_id))
         
         self.controller.set_goal(goal_advanced)
         # else:
@@ -395,6 +398,8 @@ class Repeater:
 
 
 """ TODO ideas
+Ackermann:
+    用里程计
 控制器:
     [important] 修改 goal_controller, 减少目标平移对旋转指令的即时影响; 或许也可以增大 advance distance; 或许也有 rotation offset 估计跳变的原因.
 控制:
