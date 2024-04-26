@@ -1,4 +1,4 @@
-# tr-drive
+# pf-drive
 Teach and repeat driving controller.
 
 ## Information
@@ -10,8 +10,6 @@ Teach and repeat driving controller.
 **OS**: Ubuntu 20.04
 
 **Simulator**: Webots
-
-**Reference**: https://arxiv.org/pdf/2010.11326.pdf
 
 ## Structure
 
