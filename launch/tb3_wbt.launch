@@ -4,7 +4,7 @@
     <include file="$(find webots_ros)/launch/webots.launch">
         <arg name="mode" value="realtime" />
         <arg name="no_gui" value="$(arg no_gui)" />
-        <arg name="world" value="$(find tr_drive)/simulations/tb3_wbt/tb3_wbt.wbt" />
+        <arg name="world" value="$(find pf_drive)/simulations/tb3_wbt/tb3_wbt.wbt" />
     </include>
 
     <!-- tb3 -->
@@ -27,7 +27,7 @@
 		<node name="controller_spawner" pkg="controller_manager" type="spawner" output="screen" args="controller" />
 
         <!-- dashboard -->
-	    <node pkg="tr_drive" type="tb3_wbt_dashboard_node.py" name="tb3_wbt_dashboard" output="screen" />
+	    <node pkg="pf_drive" type="tb3_wbt_dashboard_node.py" name="tb3_wbt_dashboard" output="screen" />
 
         <!-- rqt_controller_manager -->
         <!-- <node name="rqt_controller_manager" pkg="rqt_controller_manager" type="rqt_controller_manager" output="screen" /> -->
@@ -35,6 +35,6 @@
 
     <!-- rviz -->
     <arg name="rviz" default="true" />
-    <arg name="rviz_config" default="$(find tr_drive)/rviz/tb3_wbt.rviz" />
+    <arg name="rviz_config" default="$(find pf_drive)/thirdparty/rviz/config/tb3_wbt.rviz" />
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rviz_config)" if="$(arg rviz)" />
 </launch>

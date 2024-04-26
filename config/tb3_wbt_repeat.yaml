@@ -1,4 +1,4 @@
-# roslaunch tr_drive tb3_wbt_repeat.launch path:="/home/gralerfics/MyFiles/Workspace/tr_data/tb3_3"
+# roslaunch pf_drive tb3_wbt_repeat.launch path:="/home/gralerfics/MyFiles/Workspace/tr_data/tb3_3"
 tr:
     camera:
         raw_image_topic: /tb3/camera/image

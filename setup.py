@@ -6,7 +6,7 @@ distutils.log.set_verbosity(distutils.log.DEBUG)  # Set DEBUG level
 
 d = generate_distutils_setup(
     packages=[
-        'tr_drive'
+        'pf_drive'
     ],
     package_dir={'': 'src'}
 )

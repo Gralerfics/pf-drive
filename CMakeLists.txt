@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 cmake_policy(SET CMP0048 NEW)
-project(tr_drive VERSION 0.1.0)
+project(pf_drive VERSION 0.1.0)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -53,16 +53,16 @@ catkin_python_setup()
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-add_message_files(
-	FILES
+# add_message_files(
+# 	FILES
 	
-)
+# )
 
 ## Generate services in the 'srv' folder
-add_service_files(
-	FILES
+# add_service_files(
+# 	FILES
 	
-)
+# )
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -110,7 +110,7 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 # 	INCLUDE_DIRS include
-# 	LIBRARIES tr_drive
+# 	LIBRARIES pf_drive
 	CATKIN_DEPENDS
 	message_runtime
 	geometry_msgs
@@ -134,7 +134,7 @@ include_directories(
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/tr_drive.cpp
+#   src/${PROJECT_NAME}/pf_drive.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -145,7 +145,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/tr_drive_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/pf_drive_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -172,11 +172,10 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-	nodes/teacher_node.py
-	nodes/repeater_node.py
-	nodes/tb3_wbt_dashboard_node.py
-	nodes/car_wbt_controller_node.py
-	
+	src/nodes/teacher_node.py
+	src/nodes/repeater_node.py
+	src/nodes/ackermann_wbt_controller_node.py
+	src/nodes/tb3_wbt_dashboard_node.py
 	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
@@ -213,7 +212,7 @@ catkin_install_python(PROGRAMS
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_tr_drive.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_pf_drive.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

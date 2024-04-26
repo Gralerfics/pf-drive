@@ -1,15 +1,14 @@
-src/tr_drive/__pycache__/
-src/tr_drive/controller/__pycache__/
-src/tr_drive/operator/__pycache__/
-src/tr_drive/persistent/__pycache__/
-src/tr_drive/simulation/__pycache__/
-src/tr_drive/sensor/__pycache__/
-src/tr_drive/util/__pycache__/
-src/tmp/
-simulations/tb3_wbt/.tb3_wbt.wbproj
-simulations/tb3_wbt/.tb3_wbt.jpg
-simulations/car_wbt/.car_wbt.wbproj
-simulations/car_wbt/.car_wbt.jpg
-simulations/controllers/
-simulations/plugins/
-# .vscode/
+.vscode/
+src/pf_drive/__pycache__/
+src/pf_drive/controller/__pycache__/
+src/pf_drive/operator/__pycache__/
+src/pf_drive/persistent/__pycache__/
+src/pf_drive/sensor/__pycache__/
+src/pf_drive/simulation/__pycache__/
+src/pf_drive/util/__pycache__/
+thirdparty/sim_webots/world/ackermann/.ackermann.wbproj
+thirdparty/sim_webots/world/ackermann/.ackermann.jpg
+thirdparty/sim_webots/world/tb3/.tb3.wbproj
+thirdparty/sim_webots/world/tb3/.tb3.jpg
+# thirdparty/sim_webots/controllers/
+# thirdparty/sim_webots/plugins/

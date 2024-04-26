@@ -1,0 +1,23 @@
+<launch>
+    <!-- webots -->
+    <arg name="no_gui" default="false" doc="Start Webots with minimal GUI" />
+    <include file="$(find webots_ros)/launch/webots.launch">
+        <arg name="mode" value="realtime" />
+        <arg name="no_gui" value="$(arg no_gui)" />
+        <arg name="world" value="$(find pf_drive)/thirdparty/sim_webots/world/ackermann/ackermann.wbt" />
+    </include>
+
+    <!-- car -->
+    <group ns="car">
+        <!-- robot state publisher -->
+        <node pkg="robot_state_publisher" type="robot_state_publisher" name="car_state_publisher" respawn="true" respawn_delay="5" />
+
+        <!-- ackermann steering controller -->
+        <node pkg="pf_drive" type="ackermann_wbt_controller_node.py" name="ackermann_wbt_controller" output="screen" />
+    </group>
+
+    <!-- rviz -->
+    <arg name="rviz" default="true" />
+    <arg name="rviz_config" default="$(find pf_drive)/thirdparty/rviz/config/ackermann_wbt.rviz" />
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rviz_config)" if="$(arg rviz)" />
+</launch>

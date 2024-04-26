@@ -4,7 +4,7 @@
 
 	<param name="/tr/persistent/recording_path" value="$(arg path)" />
 	<param name="/tr/persistent/report_path" value="$(arg report)" />
-	<rosparam file="$(find pf_drive)/config/tb3_wbt_repeat.yaml" command="load" />
+	<rosparam file="$(find pf_drive)/config/ackermann_wbt_repeat.yaml" command="load" />
 
 	<node pkg="pf_drive" type="repeater_node.py" name="repeater" output="screen" />
 </launch>
