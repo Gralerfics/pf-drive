@@ -15,7 +15,7 @@ def spin_func():
     rospy.spin()
     dpg.destroy_context()
 
-rospy.init_node('tr_repeater', anonymous = False)
+rospy.init_node('pf_repeater', anonymous = False)
 repeater = Repeater()
 spin_thread = threading.Thread(target = spin_func)
 spin_thread.start()

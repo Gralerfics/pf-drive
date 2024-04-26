@@ -1,4 +1,4 @@
-# roslaunch pf_drive ackermann_wbt_teach.launch path:="/home/gralerfics/MyFiles/Workspace/tr_data/car_1"
+# roslaunch pf_drive ackermann_wbt_teach.launch path:="/home/gralerfics/MyFiles/Workspace/pf_data/car_1"
 tr:
     camera:
         raw_image_topic: /car/camera/image

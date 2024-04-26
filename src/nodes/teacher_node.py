@@ -13,7 +13,7 @@ def spin_func():
     rospy.spin()
     dpg.destroy_context()
 
-rospy.init_node('tr_teacher', anonymous = False)
+rospy.init_node('pf_teacher', anonymous = False)
 teacher = Teacher()
 spin_thread = threading.Thread(target = spin_func)
 spin_thread.start()

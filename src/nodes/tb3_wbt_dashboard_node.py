@@ -14,7 +14,7 @@ def spin_func():
     rospy.spin()
     dpg.destroy_context()
 
-rospy.init_node('tr_tb3_wbt_dashboard', anonymous = False)
+rospy.init_node('pf_tb3_wbt_dashboard', anonymous = False)
 dashboard = WebotsDashboardWithROSControl('/tb3/supervisor', '/tb3/controller_manager', 'controller')
 spin_thread = threading.Thread(target = spin_func)
 spin_thread.start()

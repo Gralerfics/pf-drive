@@ -1,4 +1,4 @@
-# roslaunch pf_drive tb3_wbt_teach.launch folder:="/home/gralerfics/MyFiles/Workspace/tr_data"
+# roslaunch pf_drive tb3_wbt_teach.launch folder:="/home/gralerfics/MyFiles/Workspace/pf_data"
 tr:
     camera:
         raw_image_topic: /tb3/camera/image

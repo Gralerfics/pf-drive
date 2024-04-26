@@ -10,7 +10,7 @@ from pf_drive.util.geometry import Frame, Vec3, Quat
 from pf_drive.simulation.webots import WebotsAckermannController
 
 
-rospy.init_node('tr_car_wbt_controller_node', anonymous = False)
+rospy.init_node('pf_car_wbt_controller_node', anonymous = False)
 
 wac = WebotsAckermannController(
     'left_front_steer_motor',
