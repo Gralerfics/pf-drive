@@ -15,9 +15,10 @@ class Cable:
     def __init__(self, cable_type = 'queue', distributees = [], **kwargs): # distributees = [(node_obj, port_name), ...]
         self.cable_type = cable_type
         
+        self.latest = kwargs.get('latest', True)
         self.size = kwargs.get('size', 1)
 
-        if cable_type == 'pipe': # duplex: bool
+        if cable_type == 'pipe': # duplex: bool, latest: bool
             self.pipe_recv, self.pipe_send = Pipe(duplex = kwargs.get('duplex', False))
         elif cable_type == 'queue': # size: int
             self.queue = Queue(maxsize = self.size)
@@ -44,7 +45,12 @@ class Cable:
     
     def read(self):
         if self.cable_type == 'pipe':
-            return self.pipe_recv.recv()
+            # TODO: right ?
+            res = self.pipe_recv.recv()
+            if self.latest:
+                while self.pipe_recv.poll():
+                    res = self.pipe_recv.recv()
+            return res
         elif self.cable_type == 'queue':
             return self.queue.get()
         elif self.cable_type == 'shared_object':
