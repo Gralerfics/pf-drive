@@ -9,7 +9,7 @@ class MultinodesException(Exception): pass
 
 """
     Pipe 和 Queue 接收一次后皆会弹出该数据，无法做到广播，故建议只连接两个节点 (例外情况例如多个接收节点功能是平行的);
-
+    shared_object 适用于广播，需要指定内存大小，且锁可能降低性能.
 """
 class Cable:
     def __init__(self, cable_type = 'queue', distributees = [], **kwargs): # distributees = [(node_obj, port_name), ...]
@@ -18,7 +18,7 @@ class Cable:
         self.size = kwargs.get('size', 1)
 
         if cable_type == 'pipe': # duplex: bool
-            self.pipe_parent, self.pipe_child = Pipe(duplex = kwargs.get('duplex', False))
+            self.pipe_recv, self.pipe_send = Pipe(duplex = kwargs.get('duplex', False))
         elif cable_type == 'queue': # size: int
             self.queue = Queue(maxsize = self.size)
         elif cable_type == 'shared_object': # size: int
@@ -30,7 +30,7 @@ class Cable:
     
     def write(self, data):
         if self.cable_type == 'pipe':
-            self.pipe_parent.send(data)
+            self.pipe_send.send(data)
         elif self.cable_type == 'queue':
             self.queue.put(data)
         elif self.cable_type == 'shared_object':
@@ -38,13 +38,13 @@ class Cable:
             serialized_data_length = len(serialized_data) # 序列化后的数据长度
             if 4 + serialized_data_length > self.size: # 数据过大
                 raise MultinodesException('Data too large.')
-            packed_length = struct.pack('>I', serialized_data_length) # 将数据长度打包
+            packed_length = struct.pack('>I', serialized_data_length) # 数据长度转字节
             with self.shared_obj.get_lock():
                 self.shared_obj[:(4 + serialized_data_length)] = packed_length + serialized_data # 将数据长度 (前四位) 和序列化后的数据存入共享内存
     
     def read(self):
         if self.cable_type == 'pipe':
-            return self.pipe_child.recv()
+            return self.pipe_recv.recv()
         elif self.cable_type == 'queue':
             return self.queue.get()
         elif self.cable_type == 'shared_object':
@@ -55,7 +55,7 @@ class Cable:
     
     def poll(self):
         if self.cable_type == 'pipe':
-            return self.pipe_child.poll()
+            return self.pipe_recv.poll()
         elif self.cable_type == 'queue':
             return not self.queue.empty()
         elif self.cable_type == 'shared_object':
@@ -70,11 +70,15 @@ class Cable:
 
 
 class Node(Process):
-    def __init__(self, name):
+    def __init__(self, name, is_shutdown_event):
         super(Node, self).__init__()
         self.name = name
+        self.is_shutdown_event = is_shutdown_event
         self.io = {} # cables
     
+    def is_shutdown(self):
+        return self.is_shutdown_event.is_set()
+
     def add_cable(self, port_name, cable):
         self.io[port_name] = cable
     
