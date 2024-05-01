@@ -4,7 +4,7 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /TF1/Frames1
+        - /Global Options1
         - /Odometry1/Shape1
       Splitter Ratio: 0.5714285969734192
     Tree Height: 604
@@ -58,8 +58,6 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        aligned_map:
-          Value: true
         appearance:
           Value: false
         appearance_0:
@@ -92,8 +90,6 @@ Visualization Manager:
           Value: false
         base_link:
           Value: true
-        biased_odom:
-          Value: true
         body:
           Value: false
         camera:
@@ -102,10 +98,6 @@ Visualization Manager:
           Value: false
         left_rear_wheel:
           Value: false
-        map:
-          Value: true
-        odom:
-          Value: true
         right_front_wheel:
           Value: false
         right_rear_wheel:
@@ -117,6 +109,23 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
+        base_link:
+          appearance:
+            {}
+          appearance_0:
+            {}
+          appearance_1:
+            {}
+          body:
+            appearance_2:
+              {}
+            appearance_3:
+              {}
+            appearance_4:
+              {}
+          camera:
+            appearance_13:
+              {}
         left_front_wheel:
           appearance_5:
             {}
@@ -127,29 +136,6 @@ Visualization Manager:
             {}
           appearance_9:
             {}
-        map:
-          aligned_map:
-            {}
-          odom:
-            base_link:
-              appearance:
-                {}
-              appearance_0:
-                {}
-              appearance_1:
-                {}
-              body:
-                appearance_2:
-                  {}
-                appearance_3:
-                  {}
-                appearance_4:
-                  {}
-              camera:
-                appearance_13:
-                  {}
-            biased_odom:
-              {}
         right_front_wheel:
           appearance_7:
             {}
@@ -367,7 +353,7 @@ Visualization Manager:
   Global Options:
     Background Color: 48; 48; 48
     Default Light: true
-    Fixed Frame: map
+    Fixed Frame: odom
     Frame Rate: 30
   Name: root
   Tools:
@@ -391,7 +377,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 47.41511535644531
+      Distance: 88.31361389160156
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -399,9 +385,9 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -6.814972400665283
-        Y: 34.6401481628418
-        Z: -1.7470028400421143
+        X: 10.980110168457031
+        Y: 18.830062866210938
+        Z: 7.814519882202148
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false

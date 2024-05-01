@@ -2,6 +2,8 @@ import time
 
 import numpy as np
 
+import transforms3d as t3d
+
 import rospy
 
 from webots_ros.srv import get_bool, get_boolRequest, get_boolResponse
@@ -9,6 +11,8 @@ from webots_ros.srv import get_float, get_floatRequest, get_floatResponse
 from webots_ros.srv import set_float, set_floatRequest, set_floatResponse
 
 from multinodes import Node
+
+from pf_drive.util import t3d_ext
 
 
 class WebotsRotationalMotorController:
@@ -54,6 +58,11 @@ class WebotsRotationalMotorController:
         format:
             (type = 'vw', v, w)
             (type = 'vphi', v, phi)
+    `odom`, output (pipe) [optional]
+        format:
+            4x4 np.array, TODO: 是否 .tolist() 减少少量长度? 需与转换耗时比较.
+    Notes:
+        1. Cable 建议使用 latest = True 的 pipe.
 """
 class WebotsROSAckermannActuator(Node):
     def __init__(self, name, is_shutdown_event,
@@ -84,6 +93,8 @@ class WebotsROSAckermannActuator(Node):
         rospy.wait_for_service(get_time_srv)
         self.srv_robot_get_time = rospy.ServiceProxy(get_time_srv, get_float)
 
+        self.odom = np.eye(4)
+
     def get_time(self):
         try:
             request = get_floatRequest(0)
@@ -93,56 +104,65 @@ class WebotsROSAckermannActuator(Node):
             rospy.logerr('Get time failed: %s' % e)
     
     def run(self):
+        current_time = self.get_time()
+        last_time = current_time
         while not self.is_shutdown():
             if not self.io['command'].poll():
                 continue
 
+            # 接收指令
             command = self.io['command'].read()
             if not (isinstance(command, tuple) or isinstance(command, list)):
                 continue
-            # print('\n')
-            # print(command)
             
+            # 计算执行器指令
             if command[0] == 'vw':
                 v, w = command[1], command[2]
-                
                 sgn = np.sign(v + 1e-3) * np.sign(w + 1e-3)
                 R_min = sgn * self.R_min_abs
                 R = float('inf') if abs(w) < 1e-3 else v / w
-
-                if abs(R) < abs(R_min):
-                    # 无法实现该转角，使用最大转角
-                    R = R_min
-                
-                phi_l = np.arctan(self.d / (R + self.l / 2))
-                phi_r = np.arctan(self.d / (R - self.l / 2))
-
-                w_rear = v / self.r
-
-                self.left_front_steer_motor.set_position(phi_l)
-                self.right_front_steer_motor.set_position(phi_r)
-                self.left_rear_motor.set_velocity(w_rear)
-                self.right_rear_motor.set_velocity(w_rear)
             elif command[0] == 'vphi':
                 v, phi = command[1], command[2]
-
                 sgn = np.sign(v + 1e-3) * np.sign(phi + 1e-3)
                 R_min = sgn * self.R_min_abs
                 R = float('inf') if abs(phi) < 1e-3 else self.d / np.tan(phi)
-
-                if abs(R) < abs(R_min):
-                    # 无法实现该转角，使用最大转角
-                    R = R_min
-                
-                phi_l = np.arctan(self.d / (R + self.l / 2))
-                phi_r = np.arctan(self.d / (R - self.l / 2))
-
-                w_rear = v / self.r
-
-                self.left_front_steer_motor.set_position(phi_l)
-                self.right_front_steer_motor.set_position(phi_r)
-                self.left_rear_motor.set_velocity(w_rear)
-                self.right_rear_motor.set_velocity(w_rear)
             
-            # time.sleep(0.01)
+            if abs(R) < abs(R_min): # 无法实现该转角，使用最大转角
+                R = R_min
+            
+            phi_l = np.arctan(self.d / (R + self.l / 2))
+            phi_r = np.arctan(self.d / (R - self.l / 2))
+            w_rear = v / self.r
+            self.left_front_steer_motor.set_position(phi_l)
+            self.right_front_steer_motor.set_position(phi_r)
+            self.left_rear_motor.set_velocity(w_rear)
+            self.right_rear_motor.set_velocity(w_rear)
+            
+            # 计算里程计
+            if 'odom' in self.io.keys():
+                current_time = self.get_time()
+                if current_time is None or last_time is None:
+                    last_time = current_time
+                    continue
+                dt = current_time - last_time
+                last_time = current_time
+
+                dist = v * dt
+                odom_R = t3d_ext.edR(self.odom)
+
+                if R > 1e9: # inf
+                    self.odom[:3, 3] += np.dot(odom_R, np.array([dist, 0, 0]))
+                else:
+                    theta = dist / R
+                    rot = t3d.euler.euler2mat(0, 0, theta)
+
+                    # P: robot, O: origin, R: instantaneous center of rotation, T: target of P
+                    PR = np.dot(odom_R, np.array([0, R, 0]))
+                    RT = -np.dot(rot, PR)
+                    PT = PR + RT
+
+                    self.odom[:3, :3] = np.dot(rot, odom_R)
+                    self.odom[:3, 3] += PT
+                
+                self.io['odom'].write(self.odom)
 

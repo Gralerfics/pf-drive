@@ -15,7 +15,7 @@ class Cable:
     def __init__(self, cable_type = 'queue', distributees = [], **kwargs): # distributees = [(node_obj, port_name), ...]
         self.cable_type = cable_type
         
-        self.latest = kwargs.get('latest', True)
+        self.latest = kwargs.get('latest', False) # 注意 True 只适用于所有指令同类的情况, 如掺杂控制指令则可能被忽略，应当手动实现 latest
         self.size = kwargs.get('size', 1)
 
         if cable_type == 'pipe': # duplex: bool, latest: bool

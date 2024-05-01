@@ -4,6 +4,7 @@ src/pf_drive/__pycache__/
 src/pf_drive/actuator/__pycache__/
 src/pf_drive/controller/__pycache__/
 src/pf_drive/device/__pycache__/
+src/pf_drive/util/__pycache__/
 thirdparty/sim_webots/world/ackermann/.ackermann.wbproj
 thirdparty/sim_webots/world/ackermann/.ackermann.jpg
 thirdparty/sim_webots/world/tb3/.tb3.wbproj
