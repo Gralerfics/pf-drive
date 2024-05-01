@@ -1,4 +1,5 @@
 import time
+import multiprocessing as mp
 
 import numpy as np
 
@@ -58,7 +59,7 @@ class WebotsRotationalMotorController:
         format:
             (type = 'vw', v, w)
             (type = 'vphi', v, phi)
-    `odom`, output (pipe) [optional]
+    `odom`, output (any) [optional]
         format:
             4x4 np.array, TODO: 是否 .tolist() 减少少量长度? 需与转换耗时比较.
     Notes:
@@ -103,6 +104,31 @@ class WebotsROSAckermannActuator(Node):
         except rospy.ServiceException as e:
             rospy.logerr('Get time failed: %s' % e)
     
+    def call_services(self, phi_l, phi_r, w_rear):
+        self.left_front_steer_motor.set_position(phi_l)
+        self.right_front_steer_motor.set_position(phi_r)
+        self.left_rear_motor.set_velocity(w_rear)
+        self.right_rear_motor.set_velocity(w_rear)
+    
+    def calc_and_output_odom(self, v, R, dt):
+        dist = v * dt
+        odom_R = t3d_ext.edR(self.odom)
+
+        if R > 1e9: # inf
+            self.odom[:3, 3] += np.dot(odom_R, np.array([dist, 0, 0]))
+        else:
+            theta = dist / R
+            rot = t3d.euler.euler2mat(0, 0, theta)
+
+            # P: robot, O: origin, R: instantaneous center of rotation, T: target of P
+            PR = np.dot(odom_R, np.array([0, R, 0]))
+            RT = -np.dot(rot, PR)
+
+            self.odom[:3, :3] = np.dot(rot, odom_R)
+            self.odom[:3, 3] += PR + RT
+        
+        self.io['odom'].write(self.odom)
+    
     def run(self):
         current_time = self.get_time()
         last_time = current_time
@@ -114,6 +140,14 @@ class WebotsROSAckermannActuator(Node):
             command = self.io['command'].read()
             if not (isinstance(command, tuple) or isinstance(command, list)):
                 continue
+
+            # 计算时间
+            current_time = self.get_time()
+            if current_time is None or last_time is None:
+                last_time = current_time
+                continue
+            dt = current_time - last_time
+            last_time = current_time
             
             # 计算执行器指令
             if command[0] == 'vw':
@@ -133,36 +167,14 @@ class WebotsROSAckermannActuator(Node):
             phi_l = np.arctan(self.d / (R + self.l / 2))
             phi_r = np.arctan(self.d / (R - self.l / 2))
             w_rear = v / self.r
-            self.left_front_steer_motor.set_position(phi_l)
-            self.right_front_steer_motor.set_position(phi_r)
-            self.left_rear_motor.set_velocity(w_rear)
-            self.right_rear_motor.set_velocity(w_rear)
-            
+
+            p = mp.Process(target = self.call_services, args = (phi_l, phi_r, w_rear))
+            p.start()
+
             # 计算里程计
             if 'odom' in self.io.keys():
-                current_time = self.get_time()
-                if current_time is None or last_time is None:
-                    last_time = current_time
-                    continue
-                dt = current_time - last_time
-                last_time = current_time
-
-                dist = v * dt
-                odom_R = t3d_ext.edR(self.odom)
-
-                if R > 1e9: # inf
-                    self.odom[:3, 3] += np.dot(odom_R, np.array([dist, 0, 0]))
-                else:
-                    theta = dist / R
-                    rot = t3d.euler.euler2mat(0, 0, theta)
-
-                    # P: robot, O: origin, R: instantaneous center of rotation, T: target of P
-                    PR = np.dot(odom_R, np.array([0, R, 0]))
-                    RT = -np.dot(rot, PR)
-                    PT = PR + RT
-
-                    self.odom[:3, :3] = np.dot(rot, odom_R)
-                    self.odom[:3, 3] += PT
-                
-                self.io['odom'].write(self.odom)
+                # mp.Process(target = self.calc_and_output_odom, args = (v, R, dt)).start()
+                self.calc_and_output_odom(v, R, dt)
+        
+        p.join()
 

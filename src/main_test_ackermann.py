@@ -44,6 +44,8 @@ if __name__ == '__main__':
     )
 
     cable_odom = Cable(
+    #     cable_type = 'shared_object',
+    #     size = 300,
         cable_type = 'pipe',
         latest = True,
         distributees = [
@@ -56,6 +58,7 @@ if __name__ == '__main__':
 
     rospy.init_node('main_test_ackermann', anonymous = False)
     pub_odom = rospy.Publisher('/car/odom', Odometry, queue_size = 1)
+    t = time.time()
     while not is_shutdown.is_set():
         if cable_odom.poll():
             odom = cable_odom.read()
