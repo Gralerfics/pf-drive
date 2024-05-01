@@ -72,8 +72,8 @@ class WebotsROSAckermannActuator(Node):
         left_rear_motor_srv,
         right_rear_motor_srv,
         get_time_srv,
-        wheel_distance,
-        axis_distance,
+        track,
+        wheelbase,
         wheel_radius,
         max_steering_angle
     ):
@@ -84,8 +84,8 @@ class WebotsROSAckermannActuator(Node):
         self.left_rear_motor = WebotsRotationalMotorController(left_rear_motor_srv)
         self.right_rear_motor = WebotsRotationalMotorController(right_rear_motor_srv)
         
-        self.l = wheel_distance
-        self.d = axis_distance
+        self.l = track
+        self.d = wheelbase
         self.r = wheel_radius
         self.max_phi = max_steering_angle
 

@@ -1,1 +1,1 @@
-from .ros_camera import ROSCameraWithResizeAndGrayscale
+from .ros_camera import ROSCameraWithResizeAndGrayscale, ROSCameraWithResizeGrayscaleAndPatchNormalization

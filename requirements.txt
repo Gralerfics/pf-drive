@@ -1,5 +1,5 @@
 numpy==1.21.0
 transforms3d==0.4.1
-dearpygui==1.10.1
 pynput==1.7.6
-evo==1.26.1
+# evo==1.26.1
+# dearpygui==1.10.1

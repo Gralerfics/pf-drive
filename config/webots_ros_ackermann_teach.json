@@ -1,0 +1,30 @@
+{
+    "world": {
+        "camera": {
+            "image_topic": "/car/camera/image",
+            "patch_size": 5,
+            "resize": [150, 50],
+            "horizontal_fov": 44.97
+        },
+        "odometry": {
+            "odom_output_topic": "/car/odom"
+        },
+        "car": {
+            "left_front_steer_motor_srv": "/car/left_front_steer_motor",
+            "right_front_steer_motor_srv": "/car/right_front_steer_motor",
+            "left_rear_motor_srv": "/car/left_rear_motor",
+            "right_rear_motor_srv": "/car/right_rear_motor",
+            "track": 1.628,
+            "wheelbase": 2.995,
+            "wheel_radius": 0.38,
+            "max_steering_angle": 0.6,
+            "def": "car",
+            "supervisor_srv": "/car/supervisor"
+        },
+        "get_time_srv": "/car/robot/get_time"
+    },
+    "save_raw_images": true,
+    "save_ground_truth_odoms": true,
+    "rotation_threshold": 0.15,
+    "translation_threshold": 3.0
+}

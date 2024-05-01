@@ -11,6 +11,8 @@ thirdparty/sim_webots/world/tb3/.tb3.wbproj
 thirdparty/sim_webots/world/tb3/.tb3.jpg
 # thirdparty/sim_webots/controllers/
 # thirdparty/sim_webots/plugins/
+config_bkup/
+launch_bkup/
 src/nodes_bkup/
 src/pf_drive_bkup/
 src/tmp/
