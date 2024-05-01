@@ -18,4 +18,3 @@ class ROSCameraTestController(Node):
                 ros_image_msg = CvBridge().cv2_to_imgmsg(cv_image, encoding = "passthrough")
                 publisher.publish(ros_image_msg)
 
-

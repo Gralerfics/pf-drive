@@ -4,7 +4,7 @@ import multiprocessing as mp
 
 from multinodes import Cable
 
-from pf_drive.device.ros_camera import ROSCamera
+from pf_drive.device.ros_camera import ROSCameraWithResizeAndGrayscale
 from pf_drive.controller.ros_camera_test_controller import ROSCameraTestController
 
 
@@ -17,7 +17,7 @@ def sigint_handler(sig, frame):
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, sigint_handler)
     
-    camera = ROSCamera('camera', is_shutdown, '/car/camera/image')
+    camera = ROSCameraWithResizeAndGrayscale('camera', is_shutdown, '/car/camera/image', (150, 50))
     controller = ROSCameraTestController('controller', is_shutdown)
 
     cable = Cable(
