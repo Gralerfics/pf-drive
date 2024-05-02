@@ -127,16 +127,20 @@ class WebotsROSAckermannActuator(Node):
             self.odom[:3, :3] = np.dot(rot, odom_R)
             self.odom[:3, 3] += PR + RT
         
-        self.io['odom'].write(self.odom)
+        self.io['odom'].write(self.odom) # 外部已经确保 odom 接口存在
     
     def run(self):
         current_time = self.get_time()
         last_time = current_time
-        while not self.is_shutdown():
-            if not self.io['command'].poll():
+        while not self.is_shutdown() and not rospy.is_shutdown():
+            # 检查接口
+            if 'command' not in self.io.keys():
+                time.sleep(0.1)
                 continue
 
             # 接收指令
+            if not self.io['command'].poll():
+                continue
             command = self.io['command'].read()
             if not (isinstance(command, tuple) or isinstance(command, list)):
                 continue

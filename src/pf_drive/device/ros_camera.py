@@ -26,11 +26,14 @@ class ROSCameraWithResizeAndGrayscale(Node):
         bridge = CvBridge()
 
         def image_callback(data):
+            if 'image' not in self.io:
+                return
+
             cv_image = bridge.imgmsg_to_cv2(data, desired_encoding = "passthrough")
             cv_image = cv2.resize(cv_image, self.resize, interpolation = cv2.INTER_AREA)
             cv_image = cv2.cvtColor(cv_image, cv2.COLOR_RGBA2GRAY)
-            if 'image' in self.io:
-                self.io['image'].write(cv_image)
+            
+            self.io['image'].write(cv_image)
         
         rospy.Subscriber(self.image_topic, Image, image_callback)
         rospy.spin()
@@ -78,10 +81,14 @@ class ROSCameraForRecording(Node):
         bridge = CvBridge()
 
         def image_callback(data):
+            if 'command' not in self.io:
+                return
+
             self.raw_img = bridge.imgmsg_to_cv2(data, desired_encoding = "passthrough")
             self.proc_img = cv2.cvtColor(self.raw_img, cv2.COLOR_RGBA2GRAY)
             self.proc_img = cv2.resize(self.proc_img, self.resize, interpolation = cv2.INTER_AREA)
             self.proc_img = self.patch_normalize(self.proc_img, self.patch_size)
+            
             self.handle_rpc_once(self.io['command'], block = False) # 此处同步处理，保证已有数据且完整
         
         rospy.Subscriber(self.image_topic, Image, image_callback)
