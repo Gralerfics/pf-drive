@@ -4,14 +4,13 @@ import numpy as np
 
 import transforms3d as t3d
 
-import rospy
-
 from webots_ros.srv import supervisor_get_from_defRequest, supervisor_get_from_defResponse, supervisor_get_from_def
 from webots_ros.srv import node_get_positionRequest, node_get_positionResponse, node_get_position, node_get_orientationRequest, node_get_orientationResponse, node_get_orientation
 
 from multinodes import Node
 
 from pf_drive.util import t3d_ext
+from pf_drive.util import ROSContext
 
 
 """
@@ -23,43 +22,42 @@ class WebotsROSRobotGlobalLocator(Node):
         self.robot_def = robot_def
         self.supervisor_srv = supervisor_srv
 
-        SERVICE_GET_FROM_DEF = self.supervisor_srv + '/get_from_def'
-        SERVICE_GET_POSITION = self.supervisor_srv + '/node/get_position'
-        SERVICE_GET_ORIENTATION = self.supervisor_srv + '/node/get_orientation'
-        rospy.wait_for_service(SERVICE_GET_FROM_DEF)
-        rospy.wait_for_service(SERVICE_GET_POSITION)
-        rospy.wait_for_service(SERVICE_GET_ORIENTATION)
-        self.srv_get_from_def = rospy.ServiceProxy(SERVICE_GET_FROM_DEF, supervisor_get_from_def)
-        self.srv_get_position = rospy.ServiceProxy(SERVICE_GET_POSITION, node_get_position)
-        self.srv_get_orientation = rospy.ServiceProxy(SERVICE_GET_ORIENTATION, node_get_orientation)
+        self.get_from_def_srv = self.supervisor_srv + '/get_from_def'
+        self.get_position_srv = self.supervisor_srv + '/node/get_position'
+        self.get_orientation_srv = self.supervisor_srv + '/node/get_orientation'
 
-        # 获取 robot 节点句柄 (node)
-        try:
-            request = supervisor_get_from_defRequest(name = self.robot_def, proto = 0)
-            response = self.srv_get_from_def(request)
-            self.robot_node_handle = response.node # 获取 node 句柄
-        except rospy.ServiceException as e:
-            rospy.logerr('Service call get_from_def failed.') # TODO
+        self.ros = ROSContext(self.name)
+        self.ros.register_service(self.get_from_def_srv, supervisor_get_from_def)
+        self.ros.register_service(self.get_position_srv, node_get_position)
+        self.ros.register_service(self.get_orientation_srv, node_get_orientation)
     
     def run(self):
-        while not self.is_shutdown() and not rospy.is_shutdown():
+        self.ros.init_node(anonymous = False)
+
+        # 尝试获取 robot 节点句柄, 注意在 init_node 之后
+        self.robot_node_handle = None
+        while self.robot_node_handle is None and not self.is_shutdown() and not self.ros.is_shutdown():
+            response = self.ros.call_service(self.get_from_def_srv, supervisor_get_from_defRequest(name = self.robot_def, proto = 0))
+            self.robot_node_handle = response.node if response is not None else None
+        
+        while not self.is_shutdown() and not self.ros.is_shutdown():
             if 'gt_pose' not in self.io:
                 time.sleep(0.1)
                 continue
 
-            try:
-                request = node_get_positionRequest(node = self.robot_node_handle)
-                response = self.srv_get_position(request)
-                t = np.array([response.position.x, response.position.y, response.position.z])
-            except rospy.ServiceException as e:
-                rospy.logerr('Service call get_position failed.')
-            
-            try:
-                request = node_get_orientationRequest(node = self.robot_node_handle)
-                response = self.srv_get_orientation(request)
-                q = np.array([response.orientation.w, response.orientation.x, response.orientation.y, response.orientation.z]) # t3d, wxyz
-            except rospy.ServiceException as e:
-                rospy.logerr('Service call get_orientation failed.')
+            response = self.ros.call_service(self.get_position_srv, node_get_positionRequest(node = self.robot_node_handle))
+            if response is None:
+                self.ros.logerr('Service call get_position failed.')
+                time.sleep(0.1)
+                continue
+            t = np.array([response.position.x, response.position.y, response.position.z])
+
+            response = self.ros.call_service(self.get_orientation_srv, node_get_orientationRequest(node = self.robot_node_handle))
+            if response is None:
+                self.ros.logerr('Service call get_orientation failed.')
+                time.sleep(0.1)
+                continue
+            q = np.array([response.orientation.w, response.orientation.x, response.orientation.y, response.orientation.z]) # wxyz in t3d
             
             T = t3d_ext.etq(t, q)
             self.io['gt_pose'].write(T)

@@ -123,7 +123,8 @@ actuator.start()
     Main
 """
 # ROS
-ros = ROSContext('webots_ros_ackermann_recorder', anonymous = False)
+ros = ROSContext('webots_ros_ackermann_recorder')
+ros.init_node(anonymous = False)
 odom_topic = fetch(config, ['world', 'odometry', 'odom_output_topic'], '/car/odom')
 
 # 文件目录

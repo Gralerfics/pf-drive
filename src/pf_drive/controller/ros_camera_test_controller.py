@@ -11,7 +11,8 @@ from pf_drive.util import ROSContext
 
 class ROSCameraTestController(Node):
     def run(self):
-        ros = ROSContext(self.name, anonymous = False)
+        ros = ROSContext(self.name)
+        ros.init_node(anonymous = False)
         
         while not self.is_shutdown() and not ros.is_shutdown():
             if 'camera_image' not in self.io:

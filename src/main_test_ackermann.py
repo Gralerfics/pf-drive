@@ -56,7 +56,8 @@ if __name__ == '__main__':
     controller.start()
     actuator.start()
 
-    ros = ROSContext('main_test_ackermann', anonymous = False)
+    ros = ROSContext('main_test_ackermann')
+    ros.init_node(anonymous = False)
     
     t = time.time()
     while not is_shutdown.is_set():

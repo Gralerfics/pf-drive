@@ -23,7 +23,8 @@ class ROSCameraWithResizeAndGrayscale(Node):
         self.resize = resize
     
     def run(self):
-        ros = ROSContext(self.name, anonymous = False)
+        ros = ROSContext(self.name)
+        ros.init_node(anonymous = False)
         bridge = CvBridge()
 
         def image_callback(data):
@@ -78,7 +79,8 @@ class ROSCameraForRecorder(Node):
         return np.uint8((res + 1.0) / 2 * 255)
     
     def run(self):
-        ros = ROSContext(self.name, anonymous = False)
+        ros = ROSContext(self.name)
+        ros.init_node(anonymous = False)
         bridge = CvBridge()
 
         def image_callback(data):

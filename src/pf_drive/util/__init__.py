@@ -27,13 +27,12 @@ def fetch(d: dict, keys: list, default = None):
 
 
 """
-    
+    ROS Context
+    注意: 不要在 __init__ 中调用 rospy.init_node, 否则可能导致多次初始化
 """
 class ROSContext:
-    def __init__(self, name = 'context', anonymous = True):
+    def __init__(self, name = 'context'):
         self.name = name
-
-        rospy.init_node(name, anonymous = anonymous)
 
         self.publishers = {}
         self.subscribers = {}
@@ -42,6 +41,9 @@ class ROSContext:
         self.tf_listener = None # tf.TransformListener()
 
         self.service_proxies = {}
+    
+    def init_node(self, anonymous = True):
+        rospy.init_node(self.name, anonymous = anonymous)
     
     def publish_topic(self, topic, msg, queue_size = 100): # queue_size 适当调大, 否则高速发布下可能丢包
         if topic not in self.publishers:
@@ -52,7 +54,7 @@ class ROSContext:
     def subscribe_topic(self, topic, msg_type, callback, queue_size = None): # .spin() required
         if topic not in self.subscribers:
             self.subscribers[topic] = rospy.Subscriber(topic, msg_type, callback, queue_size = queue_size)
-    
+
     def publish_tf(self, T_ab, frame_id_a, frame_id_b):
         if self.tf_broadcaster is None:
             self.tf_broadcaster = tf.TransformBroadcaster()
@@ -65,8 +67,25 @@ class ROSContext:
             frame_id_a  # parent
         )
     
+    def register_service(self, service, srv_type):
+        if service not in self.service_proxies:
+            self.service_proxies[service] = rospy.ServiceProxy(service, srv_type)
+        rospy.wait_for_service(service)
+    
+    def call_service(self, service, request, wait_for_service = False, timeout = None):
+        try:
+            if wait_for_service:
+                rospy.wait_for_service(service, timeout = timeout)
+            return self.service_proxies[service](request)
+        except rospy.ServiceException as e:
+            rospy.logerr('Call service failed: %s' % e)
+            return None
+    
     def loginfo(self, msg):
         rospy.loginfo(msg)
+    
+    def logerr(self, msg):
+        rospy.logerr(msg)
     
     def time(self):
         return rospy.Time.now()
