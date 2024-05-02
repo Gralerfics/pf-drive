@@ -18,16 +18,16 @@ from multinodes import Cable
 from pf_drive.util import t3d_ext, stamp_str, fetch
 from pf_drive.actuator.webots_ros_ackermann_actuator import WebotsROSAckermannActuator
 from pf_drive.controller.keyboard_ackermann_controller import KeyboardAckermannController
-from pf_drive.device.ros_camera import ROSCameraForRecording
-from pf_drive.device.webots_odometry import WebotsROSRobotGlobalLocator
+from pf_drive.device import ROSCameraForRecorder
+from pf_drive.device import WebotsROSRobotGlobalLocator
 
 
 """
     Arguments and Configurations
 """
-# python src/webots_ros_ackermann_teacher.py --config ./config/webots_ros_ackermann_teach.json
+# python src/webots_ros_ackermann_recorder.py --config ./config/webots_ros_ackermann_record.json
 parser = argparse.ArgumentParser()
-parser.add_argument('-c', '--config', type = str, default = './config/teacher.json')
+parser.add_argument('-c', '--config', type = str, default = './config/record.json')
 parser.add_argument('-o', '--output', type = str, default = None)
 args = parser.parse_args()
 
@@ -58,7 +58,7 @@ signal.signal(signal.SIGINT, sigint_handler)
 """
     Nodes
 """
-camera = ROSCameraForRecording('camera', is_shutdown,
+camera = ROSCameraForRecorder('camera', is_shutdown,
     fetch(config, ['world', 'camera', 'image_topic'], '/car/robot/camera'),
     tuple(fetch(config, ['world', 'camera', 'resize'], [150, 50])),
     fetch(config, ['world', 'camera', 'patch_size'], 5)
@@ -123,7 +123,7 @@ actuator.start()
     Main
 """
 # ROS
-rospy.init_node('webots_ros_ackermann_teacher', anonymous = False)
+rospy.init_node('webots_ros_ackermann_recorder', anonymous = False)
 pub_odom = rospy.Publisher(fetch(config, ['world', 'odometry', 'odom_output_topic'], '/car/odom'), Odometry, queue_size = 1)
 
 # 文件目录

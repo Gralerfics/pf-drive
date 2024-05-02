@@ -42,7 +42,7 @@ class ROSCameraWithResizeAndGrayscale(Node):
 """
     `command`, input (rpc)
 """
-class ROSCameraForRecording(Node):
+class ROSCameraForRecorder(Node):
     def __init__(self, name, is_shutdown_event, image_topic, resize, patch_size):
         super().__init__(name, is_shutdown_event)
         self.image_topic = image_topic
