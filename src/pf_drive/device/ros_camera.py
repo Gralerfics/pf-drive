@@ -11,6 +11,8 @@ from cv_bridge import CvBridge
 from multinodes import Node
 
 
+# TODO: use ROSContext
+
 """
     `image`, output (shared_object)
         format: cv2 image (np.array)

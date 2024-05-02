@@ -8,7 +8,6 @@ import multiprocessing as mp
 
 import numpy as np
 
-import rospy
 from nav_msgs.msg import Odometry
 
 # from cv_bridge import CvBridge
@@ -16,6 +15,7 @@ from nav_msgs.msg import Odometry
 from multinodes import Cable
 
 from pf_drive.util import t3d_ext, stamp_str, fetch
+from pf_drive.util import ROSContext
 from pf_drive.actuator.webots_ros_ackermann_actuator import WebotsROSAckermannActuator
 from pf_drive.controller.keyboard_ackermann_controller import KeyboardAckermannController
 from pf_drive.device import ROSCameraForRecorder
@@ -123,8 +123,8 @@ actuator.start()
     Main
 """
 # ROS
-rospy.init_node('webots_ros_ackermann_recorder', anonymous = False)
-pub_odom = rospy.Publisher(fetch(config, ['world', 'odometry', 'odom_output_topic'], '/car/odom'), Odometry, queue_size = 1)
+ros = ROSContext('webots_ros_ackermann_recorder', anonymous = False)
+odom_topic = fetch(config, ['world', 'odometry', 'odom_output_topic'], '/car/odom')
 
 # 文件目录
 if save_path_overwrite:
@@ -149,7 +149,7 @@ while not is_shutdown.is_set():
     if cable_odom.poll() and cable_gt_pose.poll():
         odom = cable_odom.read()
         gt_pose = cable_gt_pose.read()
-        pub_odom.publish(t3d_ext.e2O(odom, frame_id = 'odom', stamp = rospy.Time.now())) # only for rviz
+        ros.publish_topic(odom_topic, t3d_ext.e2O(odom, frame_id = 'odom', stamp = ros.time())) # only for rviz
         
         # 起点或超过阈值
         flag = False
@@ -171,7 +171,7 @@ while not is_shutdown.is_set():
             if save_gt_poses:
                 with open(os.path.join(save_gt_pose_folder, str(idx) + '.json'), 'w') as f:
                     json.dump(gt_pose.tolist(), f)
-            rospy.loginfo('Goal %d saved.' % idx)
+            ros.loginfo('Goal %d saved.' % idx)
             last_odom = odom
             idx += 1
 

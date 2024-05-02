@@ -57,7 +57,7 @@ if __name__ == '__main__':
     actuator.start()
 
     rospy.init_node('main_test_ackermann', anonymous = False)
-    pub_odom = rospy.Publisher('/car/odom', Odometry, queue_size = 1)
+    pub_odom = rospy.Publisher('/car/odom', Odometry, queue_size = 1) # TODO: use ROSContext
     t = time.time()
     while not is_shutdown.is_set():
         if cable_odom.poll():

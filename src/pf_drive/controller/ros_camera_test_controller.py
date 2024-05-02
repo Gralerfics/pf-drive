@@ -11,7 +11,7 @@ from multinodes import Node
 class ROSCameraTestController(Node):
     def run(self):
         rospy.init_node(self.name, anonymous = False)
-        publisher = rospy.Publisher("/test", Image, queue_size = 1)
+        publisher = rospy.Publisher("/test", Image, queue_size = 1) # TODO: use ROSContext
         while not self.is_shutdown() and not rospy.is_shutdown():
             if 'camera_image' not in self.io:
                 time.sleep(0.1)
