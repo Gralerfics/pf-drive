@@ -27,6 +27,9 @@ def euclidean_compose_tR(t, R):
     res[3, 3] = 1
     return res
 
+etq = euclidean_compose_tq
+etR = euclidean_compose_tR
+
 def euclidean_decompose_t(T):
     return T[:3, 3]
 

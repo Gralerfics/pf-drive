@@ -16,9 +16,10 @@ from nav_msgs.msg import Odometry
 from multinodes import Cable
 
 from pf_drive.util import t3d_ext, stamp_str, fetch
-from pf_drive.device.ros_camera import ROSCameraForRecording
-from pf_drive.controller.keyboard_ackermann_controller import KeyboardAckermannController
 from pf_drive.actuator.webots_ros_ackermann_actuator import WebotsROSAckermannActuator
+from pf_drive.controller.keyboard_ackermann_controller import KeyboardAckermannController
+from pf_drive.device.ros_camera import ROSCameraForRecording
+from pf_drive.device.webots_odometry import WebotsROSRobotGlobalLocator
 
 
 """
@@ -38,7 +39,7 @@ if 'save_path' not in config:
 rotation_threshold = fetch(config, ['rotation_threshold'], 0.12)
 translation_threshold_square = fetch(config, ['translation_threshold'], 3.0) ** 2
 save_raw_images = fetch(config, ['save_raw_images'], False)
-save_ground_truth_odoms = fetch(config, ['save_ground_truth_odoms'], False)
+save_gt_poses = fetch(config, ['save_gt_poses'], False)
 save_path_overwrite = fetch(config, ['save_path_overwrite'], False)
 
 
@@ -62,6 +63,10 @@ camera = ROSCameraForRecording('camera', is_shutdown,
     tuple(fetch(config, ['world', 'camera', 'resize'], [150, 50])),
     fetch(config, ['world', 'camera', 'patch_size'], 5)
 )
+locator = WebotsROSRobotGlobalLocator('locator', is_shutdown,
+    fetch(config, ['world', 'car', 'def'], 'car'),
+    fetch(config, ['world', 'supervisor_srv'], '/car/supervisor')
+)
 controller = KeyboardAckermannController('controller', is_shutdown)
 actuator = WebotsROSAckermannActuator('actuator', is_shutdown,
     fetch(config, ['world', 'car', 'left_front_steer_motor'], '/car/left_front_steer_motor'),
@@ -83,6 +88,14 @@ cable_camera_image_save = Cable(
     ]
 )
 
+cable_gt_pose = Cable(
+    cable_type = 'pipe',
+    latest = True,
+    distributees = [
+        (locator, 'gt_pose')
+    ]
+)
+
 cable_actuator_command = Cable(
     cable_type = 'pipe',
     latest = True,
@@ -101,6 +114,7 @@ cable_odom = Cable(
 )
 
 camera.start()
+locator.start()
 controller.start()
 actuator.start()
 
@@ -123,17 +137,18 @@ proc_image_folder = os.path.join(config['save_path'], 'processed_image/')
 os.makedirs(proc_image_folder, exist_ok = True)
 odom_folder = os.path.join(config['save_path'], 'odom/')
 os.makedirs(odom_folder, exist_ok = True)
-if save_ground_truth_odoms:
-    ground_truth_odom_folder = os.path.join(config['save_path'], 'ground_truth_odom/')
-    os.makedirs(ground_truth_odom_folder, exist_ok = True)
+if save_gt_poses:
+    save_gt_pose_folder = os.path.join(config['save_path'], 'gt_pose/')
+    os.makedirs(save_gt_pose_folder, exist_ok = True)
 
 # 主循环
 odom = None
 last_odom = None
 idx = 0
 while not is_shutdown.is_set():
-    if cable_odom.poll():
+    if cable_odom.poll() and cable_gt_pose.poll():
         odom = cable_odom.read()
+        gt_pose = cable_gt_pose.read()
         pub_odom.publish(t3d_ext.e2O(odom, frame_id = 'odom', stamp = rospy.Time.now())) # only for rviz
         
         # 起点或超过阈值
@@ -153,9 +168,9 @@ while not is_shutdown.is_set():
             }))
             with open(os.path.join(odom_folder, str(idx) + '.json'), 'w') as f:
                 json.dump(odom.tolist(), f)
-            if save_ground_truth_odoms:
-                with open(os.path.join(ground_truth_odom_folder, str(idx) + '.json'), 'w') as f:
-                    pass # TODO
+            if save_gt_poses:
+                with open(os.path.join(save_gt_pose_folder, str(idx) + '.json'), 'w') as f:
+                    json.dump(gt_pose.tolist(), f)
             rospy.loginfo('Goal %d saved.' % idx)
             last_odom = odom
             idx += 1
@@ -165,6 +180,7 @@ while not is_shutdown.is_set():
     Wait for Termination
 """
 camera.join()
+locator.join()
 controller.join()
 actuator.join()
 

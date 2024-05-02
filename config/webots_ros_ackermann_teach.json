@@ -18,13 +18,13 @@
             "wheelbase": 2.995,
             "wheel_radius": 0.38,
             "max_steering_angle": 0.6,
-            "def": "car",
-            "supervisor_srv": "/car/supervisor"
+            "def": "car"
         },
+        "supervisor_srv": "/car/supervisor",
         "get_time_srv": "/car/robot/get_time"
     },
     "save_raw_images": true,
-    "save_ground_truth_odoms": true,
+    "save_gt_poses": true,
     "rotation_threshold": 0.15,
     "translation_threshold": 3.0,
     "save_path": "./output",

@@ -1,1 +1,2 @@
 from .ros_camera import ROSCameraWithResizeAndGrayscale, ROSCameraForRecording
+from .webots_odometry import WebotsROSRobotGlobalLocator
