@@ -2,12 +2,12 @@ import time
 import signal
 import multiprocessing as mp
 
-import rospy
 from nav_msgs.msg import Odometry
 
 from multinodes import Cable
 
 from pf_drive.util import t3d_ext
+from pf_drive.util import ROSContext
 from pf_drive.controller.keyboard_ackermann_controller import KeyboardAckermannController
 from pf_drive.actuator.webots_ros_ackermann_actuator import WebotsROSAckermannActuator
 
@@ -56,13 +56,13 @@ if __name__ == '__main__':
     controller.start()
     actuator.start()
 
-    rospy.init_node('main_test_ackermann', anonymous = False)
-    pub_odom = rospy.Publisher('/car/odom', Odometry, queue_size = 1) # TODO: use ROSContext
+    ros = ROSContext('main_test_ackermann', anonymous = False)
+    
     t = time.time()
     while not is_shutdown.is_set():
         if cable_odom.poll():
             odom = cable_odom.read()
-            pub_odom.publish(t3d_ext.e2O(odom, frame_id = 'odom', stamp = rospy.Time.now()))
+            ros.publish_topic('/car/odom', t3d_ext.e2O(odom, frame_id = 'odom', stamp = ros.time()), queue_size = 1)
     
     controller.join()
     actuator.join()

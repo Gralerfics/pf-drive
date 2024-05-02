@@ -2,7 +2,6 @@ import time
 
 import numpy as np
 
-import rospy
 from sensor_msgs.msg import Image
 
 import cv2
@@ -10,8 +9,8 @@ from cv_bridge import CvBridge
 
 from multinodes import Node
 
+from pf_drive.util import ROSContext
 
-# TODO: use ROSContext
 
 """
     `image`, output (shared_object)
@@ -24,7 +23,7 @@ class ROSCameraWithResizeAndGrayscale(Node):
         self.resize = resize
     
     def run(self):
-        rospy.init_node(self.name, anonymous = False)
+        ros = ROSContext(self.name, anonymous = False)
         bridge = CvBridge()
 
         def image_callback(data):
@@ -37,8 +36,8 @@ class ROSCameraWithResizeAndGrayscale(Node):
             
             self.io['image'].write(cv_image)
         
-        rospy.Subscriber(self.image_topic, Image, image_callback)
-        rospy.spin()
+        ros.subscribe_topic(self.image_topic, Image, image_callback)
+        ros.spin()
 
 
 """
@@ -79,7 +78,7 @@ class ROSCameraForRecorder(Node):
         return np.uint8((res + 1.0) / 2 * 255)
     
     def run(self):
-        rospy.init_node(self.name, anonymous = False)
+        ros = ROSContext(self.name, anonymous = False)
         bridge = CvBridge()
 
         def image_callback(data):
@@ -93,6 +92,6 @@ class ROSCameraForRecorder(Node):
             
             self.handle_rpc_once(self.io['command'], block = False) # 此处同步处理，保证已有数据且完整
         
-        rospy.Subscriber(self.image_topic, Image, image_callback)
-        rospy.spin()
+        ros.subscribe_topic(self.image_topic, Image, image_callback)
+        ros.spin()
 
