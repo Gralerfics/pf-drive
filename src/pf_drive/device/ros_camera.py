@@ -13,7 +13,7 @@ from multinodes import Node
 
 """
     `image`, output (shared_object)
-        format: cv2 image
+        format: cv2 image (np.array)
 """
 class ROSCameraWithResizeAndGrayscale(Node):
     def __init__(self, name, is_shutdown_event, image_topic, resize):
@@ -29,22 +29,32 @@ class ROSCameraWithResizeAndGrayscale(Node):
             cv_image = bridge.imgmsg_to_cv2(data, desired_encoding = "passthrough")
             cv_image = cv2.resize(cv_image, self.resize, interpolation = cv2.INTER_AREA)
             cv_image = cv2.cvtColor(cv_image, cv2.COLOR_RGBA2GRAY)
-            self.io['image'].write(cv_image)
+            if 'image' in self.io:
+                self.io['image'].write(cv_image)
         
         rospy.Subscriber(self.image_topic, Image, image_callback)
         rospy.spin()
 
 
 """
-    `image`, output (shared_object)
-        format: cv2 image
+    `command`, input (rpc)
 """
-class ROSCameraWithResizeGrayscaleAndPatchNormalization(Node):
+class ROSCameraForRecording(Node):
     def __init__(self, name, is_shutdown_event, image_topic, resize, patch_size):
         super().__init__(name, is_shutdown_event)
         self.image_topic = image_topic
         self.resize = resize
         self.patch_size = patch_size
+
+        self.raw_img = None
+        self.proc_img = None
+    
+    # @rpc
+    def save_image(self, raw_img_path, proc_img_path):
+        if self.raw_img is not None:
+            cv2.imwrite(raw_img_path, self.raw_img)
+        if self.proc_img is not None:
+            cv2.imwrite(proc_img_path, self.proc_img)
     
     def patch_normalize(self, img, patch_size):
         patch_radius = (patch_size - 1) // 2
@@ -68,11 +78,11 @@ class ROSCameraWithResizeGrayscaleAndPatchNormalization(Node):
         bridge = CvBridge()
 
         def image_callback(data):
-            img = bridge.imgmsg_to_cv2(data, desired_encoding = "passthrough")
-            img = cv2.cvtColor(img, cv2.COLOR_RGBA2GRAY)
-            img = cv2.resize(img, self.resize, interpolation = cv2.INTER_AREA)
-            img = self.patch_normalize(img, self.patch_size)
-            self.io['image'].write(img)
+            self.raw_img = bridge.imgmsg_to_cv2(data, desired_encoding = "passthrough")
+            self.proc_img = cv2.cvtColor(self.raw_img, cv2.COLOR_RGBA2GRAY)
+            self.proc_img = cv2.resize(self.proc_img, self.resize, interpolation = cv2.INTER_AREA)
+            self.proc_img = self.patch_normalize(self.proc_img, self.patch_size)
+            self.handle_rpc_once(self.io['command'], block = False) # 此处同步处理，保证已有数据且完整
         
         rospy.Subscriber(self.image_topic, Image, image_callback)
         rospy.spin()

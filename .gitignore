@@ -1,4 +1,5 @@
 .vscode/
+output/
 src/multinodes/__pycache__/
 src/pf_drive/__pycache__/
 src/pf_drive/actuator/__pycache__/
@@ -9,10 +10,8 @@ thirdparty/sim_webots/world/ackermann/.ackermann.wbproj
 thirdparty/sim_webots/world/ackermann/.ackermann.jpg
 thirdparty/sim_webots/world/tb3/.tb3.wbproj
 thirdparty/sim_webots/world/tb3/.tb3.jpg
-# thirdparty/sim_webots/controllers/
-# thirdparty/sim_webots/plugins/
-config_bkup/
-launch_bkup/
-src/nodes_bkup/
+thirdparty/sim_webots/controllers/
+thirdparty/sim_webots/plugins/
+
 src/pf_drive_bkup/
 src/tmp/

@@ -26,5 +26,7 @@
     "save_raw_images": true,
     "save_ground_truth_odoms": true,
     "rotation_threshold": 0.15,
-    "translation_threshold": 3.0
+    "translation_threshold": 3.0,
+    "save_path": "./output",
+    "save_path_overwrite": true
 }
