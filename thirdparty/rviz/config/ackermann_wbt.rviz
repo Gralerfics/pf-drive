@@ -98,6 +98,10 @@ Visualization Manager:
           Value: false
         left_rear_wheel:
           Value: false
+        map:
+          Value: true
+        odom:
+          Value: true
         right_front_wheel:
           Value: false
         right_rear_wheel:
@@ -135,6 +139,9 @@ Visualization Manager:
           appearance_10:
             {}
           appearance_9:
+            {}
+        map:
+          odom:
             {}
         right_front_wheel:
           appearance_7:
@@ -353,7 +360,7 @@ Visualization Manager:
   Global Options:
     Background Color: 48; 48; 48
     Default Light: true
-    Fixed Frame: odom
+    Fixed Frame: map
     Frame Rate: 30
   Name: root
   Tools:
@@ -377,7 +384,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 97.48692321777344
+      Distance: 70.21263122558594
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -385,9 +392,9 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 10.980110168457031
-        Y: 18.830062866210938
-        Z: 7.814519882202148
+        X: 0.5858482718467712
+        Y: 22.562604904174805
+        Z: 8.19469928741455
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false

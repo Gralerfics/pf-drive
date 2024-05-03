@@ -145,8 +145,11 @@ while not ros.is_shutdown():
     if cable_odom.poll() and cable_gt_pose.poll():
         odom = cable_odom.read()
         gt_pose = cable_gt_pose.read()
+
         ros.publish_topic(odom_topic, t3d_ext.e2O(odom, frame_id = 'odom', stamp = ros.time())) # only for rviz
-        
+        T_map_odom = np.dot(gt_pose, t3d_ext.einv(odom))
+        ros.publish_tf(T_map_odom, 'map', 'odom')
+
         # 起点或超过阈值
         flag = False
         if last_odom is None:

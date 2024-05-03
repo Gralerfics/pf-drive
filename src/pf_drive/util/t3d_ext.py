@@ -33,14 +33,18 @@ etR = euclidean_compose_tR
 def euclidean_decompose_t(T):
     return T[:3, 3]
 
-def euclidean_decompose_q(T):
+def euclidean_decompose_q_wxyz(T):
     return t3d.quaternions.mat2quat(T[:3, :3])
+
+def euclidean_decompose_q_xyzw(T):
+    return t3d.quaternions.mat2quat(T[:3, :3])[[1, 2, 3, 0]]
 
 def euclidean_decompose_R(T):
     return T[:3, :3]
 
 edt = euclidean_decompose_t
-edq = euclidean_decompose_q
+edq_wxyz = euclidean_decompose_q_wxyz
+edq_xyzw = euclidean_decompose_q_xyzw
 edR = euclidean_decompose_R
 
 
@@ -103,7 +107,7 @@ def euclidean_to_Odometry(T, frame_id = '', stamp = None):
         msg.header.stamp = stamp
     msg.pose.pose = Pose(
         position = Point(*edt(T)),
-        orientation = Quaternion(*edq(T))
+        orientation = Quaternion(*edq_xyzw(T))
     )
     return msg
 

@@ -58,7 +58,7 @@ class ROSContext:
     def publish_tf(self, T_ab, frame_id_a, frame_id_b):
         if self.tf_broadcaster is None:
             self.tf_broadcaster = tf.TransformBroadcaster()
-        t_ab, q_ab = t3d_ext.edt(T_ab), t3d_ext.edq(T_ab)
+        t_ab, q_ab = t3d_ext.edt(T_ab), t3d_ext.edq_xyzw(T_ab)
         self.tf_broadcaster.sendTransform(
             t_ab,
             q_ab,
