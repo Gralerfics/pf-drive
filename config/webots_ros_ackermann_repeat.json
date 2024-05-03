@@ -13,6 +13,7 @@
     },
     "match_offset_radius": 90,
     "along_path_radius": 2,
+    "predict_number": 5,
     "k_rotation": 0.06,
     "k_along_path": 0.1,
     "distance_threshold": 0.2,

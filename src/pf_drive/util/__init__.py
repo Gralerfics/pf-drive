@@ -1,6 +1,10 @@
 import os
 import time
 
+import numpy as np
+
+from scipy import signal
+
 import rospy
 import tf
 
@@ -38,6 +42,32 @@ def get_filename_number(filename):
 
 def get_numbered_file_list(folder: str):
     return [x for x in sorted(os.listdir(folder), key = lambda x: get_filename_number(x)) if get_filename_number(x) >= 0]
+
+
+"""
+    list 实现可访问元素的队列, 队首为 0
+    效率相对不高, 且受元素大小影响, 仅用于较短且较不频繁的操作
+"""
+class ListQueue:
+    def __init__(self, size = 5):
+        self.size = size
+        self.q = []
+    
+    def __getitem__(self, s):
+        return self.q[s]
+    
+    def push(self, x):
+        self.q.append(x)
+        if len(self.q) > self.size:
+            self.q.pop(0)
+    
+    def pop(self):
+        if len(self.q) > 0:
+            return self.q.pop(0)
+        return None
+
+    def is_full(self):
+        return len(self.q) == self.size
 
 
 """
@@ -109,4 +139,53 @@ class ROSContext:
     
     def spin(self):
         rospy.spin()
+
+
+"""
+    一些图像处理函数
+""" 
+def horizontal_cumsum(image, width):
+	cumsum = image.sum(axis = 0).cumsum()
+	return cumsum[(width - 1):] - cumsum[:(1 - width)]
+
+def NCC_horizontal_scan(img, img_ref):
+    img = np.pad(img, ((0, ), (int(img.shape[1] / 2), )), mode = 'constant', constant_values = 0)
+
+    img_delta = img - img.mean()
+    img_ref_delta = img_ref - img_ref.mean()
+    numerator = signal.correlate2d(img_delta, img_ref_delta, mode = 'valid')
+
+    I_hat = horizontal_cumsum(img, img_ref.shape[1])
+    I_squared = horizontal_cumsum(img ** 2, img_ref.shape[1])
+
+    denominator = np.sqrt((I_squared - I_hat ** 2 / img_ref.size) * (img_ref_delta ** 2).sum())
+    with np.errstate(divide = 'raise', invalid = 'raise'):
+        try:
+            res = (numerator / denominator)[0]
+        except Exception:
+            res = np.zeros(img.shape[1] - img_ref.shape[1] + 1)
+            res[len(res) // 2] = 1
+    return res
+
+def NCC_horizontal_match(img, img_ref):
+    values = NCC_horizontal_scan(img, img_ref)
+    offset = np.argmax(values)
+    return offset - (len(values) - 1) / 2, values[offset]
+
+
+# propective_offset = 70 # positive: counter-clockwise (objects move right from img_ref to img)
+
+# img_ref = np.random.rand(50, 150)
+# if propective_offset > 0:
+#     # img = np.concatenate((img_ref[:, (150 - propective_offset):], img_ref[:,:(150 - propective_offset)]), axis = 1)
+#     img = np.concatenate((np.zeros((50, propective_offset)), img_ref[:,:(150 - propective_offset)]), axis = 1)
+# else:
+#     # img = np.concatenate((img_ref[:, -propective_offset:], img_ref[:, :-propective_offset]), axis = 1)
+#     img = np.concatenate((img_ref[:, -propective_offset:], np.zeros((50, -propective_offset))), axis = 1)
+
+# t = time.time()
+# for i in range(5):
+#     l = NCC_horizontal_match(img, img_ref)
+# print(time.time() - t)
+# print((int(l[0]), l[1]))
 

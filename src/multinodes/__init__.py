@@ -42,11 +42,11 @@ class Cable:
         
         self.distribute(distributees)
     
-    def write(self, data):
+    def write(self, data, block = True): # block only for queue (and rpc)
         if self.cable_type == 'pipe':
             self.pipe_send.send(data)
         elif self.cable_type == 'queue':
-            self.queue.put(data, block = True)
+            self.queue.put(data, block = block)
         elif self.cable_type == 'shared_object':
             serialized_data = pickle.dumps(data) # 序列化对象
             serialized_data_length = len(serialized_data) # 序列化后的数据长度
@@ -58,13 +58,13 @@ class Cable:
         elif self.cable_type == 'event':
             self.event.set() if bool(data) else self.event.clear()
         elif self.cable_type == 'rpc':
-            self.queue.put(data) # TODO: 加上 seq 标号
+            self.queue.put(data, block = block) # TODO: 加上 seq 标号
     
     def feedback(self, data): # only for the sender in rpc
         if self.cable_type == 'rpc':
             pass # TODO: 取反馈队列的数据和 seq 标号
 
-    def read(self):
+    def read(self, block = True):
         if self.cable_type == 'pipe':
             res = self.pipe_recv.recv()
             if self.latest:
@@ -72,7 +72,7 @@ class Cable:
                     res = self.pipe_recv.recv()
             return res
         elif self.cable_type == 'queue':
-            return self.queue.get()
+            return self.queue.get(block = block)
         elif self.cable_type == 'shared_object':
             with self.shared_obj.get_lock():
                 serialized_data_length = struct.unpack('>I', bytes(self.shared_obj[:4]))[0]
@@ -81,7 +81,7 @@ class Cable:
         elif self.cable_type == 'event':
             return self.event.is_set()
         elif self.cable_type == 'rpc':
-            return self.queue.get() # TODO: 分别取命令部分和 seq 标号
+            return self.queue.get(block = block) # TODO: 分别取命令部分和 seq 标号
     
     def poll(self):
         if self.cable_type == 'pipe':

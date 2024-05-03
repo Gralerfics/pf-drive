@@ -11,10 +11,10 @@ import numpy as np
 
 from multinodes import Cable
 
-from pf_drive.util import t3d_ext, stamp_str, fetch, get_numbered_file_list
+from pf_drive.util import t3d_ext, fetch, get_numbered_file_list
 from pf_drive.util import ROSContext
 from pf_drive.actuator import WebotsROSAckermannActuatorComputer, WebotsROSAckermannActuatorCaller
-from pf_drive.controller import RepeatController
+from pf_drive.controller import BaselineRepeatController
 from pf_drive.device import ROSCameraWithProcessingAndSending
 from pf_drive.device import WebotsROSRobotGlobalLocator
 from pf_drive.storage import RecordLoaderQueued
@@ -28,6 +28,7 @@ parser.add_argument('-c', '--config', type = str, default = './config/repeat.jso
 parser.add_argument('-r', '--record', type = str, default = None) # config['load_path'] 优先
 args = parser.parse_args()
 
+# 配置文件参数
 config_path = args.config
 config = json.load(open(config_path, 'r'))
 if 'load_path' not in config:
@@ -35,6 +36,7 @@ if 'load_path' not in config:
         raise ValueError('No record path specified.') # TODO
     config['load_path'] = args.record
 
+# record 参数
 with open(os.path.join(config['load_path'], 'parameters.json'), 'r') as f:
     parameters = json.load(f)
     config['world']['camera']['resize'] = parameters['image']['resize']
@@ -45,11 +47,11 @@ with open(os.path.join(config['load_path'], 'parameters.json'), 'r') as f:
     #     'translation_threshold': parameters['translation_threshold']
     # }
 
+# 常用参数
+load_path = config['load_path']
 resize = tuple(fetch(config, ['world', 'camera', 'resize'], [150, 50]))
 patch_size = fetch(config, ['world', 'camera', 'patch_size'], 5)
 horizontal_fov = fetch(config, ['world', 'camera', 'horizontal_fov'], 44.97)
-
-load_path = config['load_path']
 
 
 """
@@ -67,7 +69,13 @@ locator = WebotsROSRobotGlobalLocator('locator',
 loader = RecordLoaderQueued('loader',
     load_path
 )
-controller = RepeatController('controller')
+controller = BaselineRepeatController('controller',
+    match_offset_radius = fetch(config, ['match_offset_radius'], 90),
+    along_path_radius = fetch(config, ['along_path_radius'], 2),
+    predict_number = fetch(config, ['predict_number'], 5),
+    k_rotation = fetch(config, ['k_rotation'], 0.06),
+    k_along_path = fetch(config, ['k_along_path'], 0.1)
+)
 actuator_computer = WebotsROSAckermannActuatorComputer('actuator_computer',
     fetch(config, ['world', 'get_time_srv'], '/car/robot/get_time'),
     fetch(config, ['world', 'car', 'track'], 1.628),
@@ -169,8 +177,6 @@ for filename in get_numbered_file_list(odom_load_path):
 for filename in get_numbered_file_list(gt_pose_load_path):
     with open(os.path.join(gt_pose_load_path, filename), 'r') as f:
         record_gts.append(np.array(json.load(f)))
-
-from geometry_msgs.msg import PoseStamped
 ros.publish_topic('/recorded_odoms', t3d_ext.es2P(record_odoms, frame_id = 'odom'))
 ros.publish_topic('/recorded_gts', t3d_ext.es2P(record_gts, frame_id = 'map'))
 

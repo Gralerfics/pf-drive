@@ -142,7 +142,7 @@ PS2e = PoseStamped_to_euclidean
 def euclideans_to_Path(T_list, frame_id = ''):
     msg = Path()
     msg.header.frame_id = frame_id
-    msg.poses = [euclidean_to_PoseStamped(T, frame_id) for T in T_list]
+    msg.poses = [euclidean_to_PoseStamped(T, frame_id) for T in T_list if T is not None]
     return msg
 
 es2P = euclideans_to_Path

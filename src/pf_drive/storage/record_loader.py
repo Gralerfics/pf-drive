@@ -29,14 +29,17 @@ class RecordLoaderQueued(Node):
         assert len(odom_filelist) == len(processed_image_filelist)
         N = len(odom_filelist)
 
-        while True:
-            if 'output' not in self.io:
-                time.sleep(0.1)
-                continue
+        while 'output' not in self.io:
+            time.sleep(0.1)
+            continue
 
-            for idx in range(N):
-                image = cv2.imread(os.path.join(self.processed_image_folder, processed_image_filelist[idx]))
-                with open(os.path.join(self.odom_folder, odom_filelist[idx]), 'r') as f:
-                    odom = np.array(json.load(f))
-                self.io['output'].write((image, odom))
+        for idx in range(N):
+            image = cv2.imread(os.path.join(self.processed_image_folder, processed_image_filelist[idx]))
+            with open(os.path.join(self.odom_folder, odom_filelist[idx]), 'r') as f:
+                odom = np.array(json.load(f))
+            self.io['output'].write((image, odom), block = True)
+        
+        # 读完后不断发送 None
+        while True:
+            self.io['output'].write(None, block = True)
 
