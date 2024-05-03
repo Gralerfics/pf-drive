@@ -1,0 +1,25 @@
+{
+    "world": {
+        "camera": {
+            "image_topic": "/car/camera/image"
+        },
+        "car": {
+            "track": 1.628,
+            "wheelbase": 2.995,
+            "wheel_radius": 0.38,
+            "max_steering_angle": 0.6,
+            "def": "car"
+        },
+        "odometry": {
+            "odom_output_topic": "/car/odom"
+        },
+        "supervisor_srv": "/car/supervisor"
+    },
+    "match_offset_radius": 90,
+    "along_path_radius": 2,
+    "predict_number": 5,
+    "k_rotation": 0.001,
+    "k_along_path": 0.01,
+    "distance_threshold": 0.2,
+    "angle_threshold": 0.1
+}

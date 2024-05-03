@@ -172,10 +172,6 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-	src/nodes/teacher_node.py
-	src/nodes/repeater_node.py
-	src/nodes/ackermann_wbt_controller_node.py
-	src/nodes/tb3_wbt_dashboard_node.py
 	DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
