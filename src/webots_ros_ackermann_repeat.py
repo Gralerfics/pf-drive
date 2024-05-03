@@ -193,16 +193,20 @@ ros.publish_topic('/recorded_gts', t3d_ext.es2P(record_gts, frame_id = 'map'))
 # 主循环
 odom, last_odom = None, None
 idx = 0
-while not ros.is_shutdown():
-    if cable_actuator_main_odom.poll() and cable_locator_main_gt.poll():
-        odom = cable_actuator_main_odom.read() # odom: actuator_computer -> main
-        cable_main_ctrl_odom.write(odom) # odom: main -> controller
-        gt_pose = cable_locator_main_gt.read() # gt_pose: locator -> main
+try:
+    while not ros.is_shutdown():
+        if cable_actuator_main_odom.poll() and cable_locator_main_gt.poll():
+            odom = cable_actuator_main_odom.read() # odom: actuator_computer -> main
+            cable_main_ctrl_odom.write(odom) # odom: main -> controller
+            gt_pose = cable_locator_main_gt.read() # gt_pose: locator -> main
 
-        # 发布 odom 与坐标变换
-        ros.publish_topic(odom_topic, t3d_ext.e2O(odom, frame_id = 'odom', stamp = ros.time())) # only for rviz
-        T_map_odom = np.dot(gt_pose, t3d_ext.einv(odom))
-        ros.publish_tf(T_map_odom, 'map', 'odom')
+            # 发布 odom 与坐标变换
+            ros.publish_topic(odom_topic, t3d_ext.e2O(odom, frame_id = 'odom', stamp = ros.time())) # only for rviz
+            T_map_odom = np.dot(gt_pose, t3d_ext.einv(odom))
+            ros.publish_tf(T_map_odom, 'map', 'odom')
+finally:
+    # TODO: 貌似没用
+    cable_ctrl_actuator_command.write(('vw', 0, 0))
 
 
 # camera.join()

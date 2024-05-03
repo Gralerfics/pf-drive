@@ -104,13 +104,14 @@ class BaselineRepeatController(Node):
             self.pass_to_next_goal()
 
         # 主循环
-        last_time = time.time()
+        timer_fps = timer_P = time.time()
         operation_num = 0
         while not ros.is_shutdown():
-            if time.time() - last_time > 2.0:
-                print('fps:', operation_num / (time.time() - last_time))
+            current_time = time.time()
+            if current_time - timer_fps > 2.0:
+                print('fps:', operation_num / (time.time() - timer_fps))
                 operation_num = 0
-                last_time = time.time()
+                timer_fps = current_time
 
             # 结束
             if self.q[r] is not None and self.q[r + 1] is None:
@@ -144,6 +145,9 @@ class BaselineRepeatController(Node):
                     l_proj_odomA_odomR = np.dot(t_odomA_odomR, t_odomA_odomB) / l_odomA_odomB
                     u = l_proj_odomA_odomR / l_odomA_odomB # not turning_goal
 
+                    dt = current_time - timer_P
+                    timer_P = current_time
+
                     # along-path correction
                     scan_q_indices = [q_idx for q_idx in range(2 * r + 1) if self.q[q_idx] is not None]
                     scan_q_indices = [scan_q_indices[0]] * (scan_q_indices[0]) + scan_q_indices
@@ -157,17 +161,8 @@ class BaselineRepeatController(Node):
                         scan_offsets[k], scan_values[k] = NCC_horizontal_match(image, img_ref)
                     scan_values[scan_values < min(0.1, scan_values.min() / 2)] = 0 # TODO, threshold 当前随意设置, 理应表示 NCC 底噪; 如果全都被滤除说明两图差距已经很大, 也许可以作为确认丢失的一种条件; 最小值除二仅为防止崩溃, 无实际意义.
                     delta_p = scan_values / scan_values.sum() @ scan_distances
-                    delta_distance = self.k_along_path * delta_p
+                    delta_distance = self.k_along_path * dt * delta_p
                     along_path_correction = (l_odomR_odomB - delta_distance) / l_odomR_odomB # TODO: divide 0
-                    # TODO: k * dt
-
-                    # print(i)
-                    # print(scan_q_indices)
-                    # print(scan_values)
-                    # print(scan_distances)
-                    # print(delta_p)
-                    # print(along_path_correction)
-                    # print('\n')
 
                     if u > 1.0 - 1e-2 or l_odomR_odomB < self.distance_threshold:
                         self.pass_to_next_goal()
@@ -177,15 +172,7 @@ class BaselineRepeatController(Node):
                     theta_A = scan_offsets[k_r] / image.shape[1] * self.horizontal_fov
                     theta_B = scan_offsets[k_r + 1] / image.shape[1] * self.horizontal_fov
                     theta_R = (1 - u) * theta_A + u * theta_B
-                    rotation_correction = -self.k_rotation * theta_R
-                    # TODO: k * dt
-
-                    print('\n')
-                    print('i', i)
-                    print('theta_A', theta_A)
-                    print('theta_B', theta_B)
-                    print('theta_R', theta_R)
-                    print('rotation_correction', rotation_correction)
+                    rotation_correction = -self.k_rotation * dt * theta_R
 
                     # 修正 T_0_odomB
                     correction_offset = t3d_ext.etR([0, 0, 0], t3d.euler.euler2mat(0, 0, rotation_correction)) @ T_odomR_odomB
@@ -214,7 +201,6 @@ class BaselineRepeatController(Node):
 
                 dy = T_odomR_odomN[1, 3]
                 dx = T_odomR_odomN[0, 3]
-                print(T_odomR_odomN[:3, 3])
                 ros.publish_topic('/goal', t3d_ext.e2PS(T_0_odomN, frame_id = 'odom'))
 
                 if abs(dy) < 1e-2:
@@ -228,7 +214,4 @@ class BaselineRepeatController(Node):
 
                 self.io['actuator_command'].write(('vw', v, w))
                 operation_num += 1
-                
-                print('vw', v, w)
-                # time.sleep(5.0)
 
