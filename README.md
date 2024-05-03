@@ -37,6 +37,8 @@ For example:
 python src/webots_ros_ackermann_record.py --config ./config/webots_ros_ackermann_record.json --output /home/gralerfics/MyFiles/Workspace/pf_data/car_x
 ```
 
+> Keyboard control: left, right, up and down arrow keys; space bar to brake; z to reset the steering angle.
+
 3. Start replaying the data:
 
 ```bash
