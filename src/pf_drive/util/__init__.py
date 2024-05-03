@@ -1,3 +1,4 @@
+import os
 import time
 
 import rospy
@@ -24,6 +25,19 @@ def fetch(d: dict, keys: list, default = None):
         else:
             return default
     return obj
+
+"""
+    List files in folder, sorted by filename number
+"""
+def get_filename_number(filename):
+    try:
+        res = int(filename.split('.')[0])
+    except ValueError:
+        res = -1
+    return res
+
+def get_numbered_file_list(folder: str):
+    return [x for x in sorted(os.listdir(folder), key = lambda x: get_filename_number(x)) if get_filename_number(x) >= 0]
 
 
 """

@@ -17,6 +17,7 @@ from pf_drive.actuator import WebotsROSAckermannActuatorComputer, WebotsROSAcker
 from pf_drive.controller import RepeatController
 from pf_drive.device import ROSCameraWithProcessingAndSending
 from pf_drive.device import WebotsROSRobotGlobalLocator
+from pf_drive.storage import RecordLoaderQueued
 
 
 """
@@ -24,12 +25,14 @@ from pf_drive.device import WebotsROSRobotGlobalLocator
 """
 parser = argparse.ArgumentParser()
 parser.add_argument('-c', '--config', type = str, default = './config/repeat.json')
-parser.add_argument('-r', '--record', type = str, default = './output/record_' + stamp_str() + '/') # config['load_path'] 优先
+parser.add_argument('-r', '--record', type = str, default = None) # config['load_path'] 优先
 args = parser.parse_args()
 
 config_path = args.config
 config = json.load(open(config_path, 'r'))
 if 'load_path' not in config:
+    if args.record is None:
+        raise ValueError('No record path specified.') # TODO
     config['load_path'] = args.record
 
 with open(os.path.join(config['load_path'], 'parameters.json'), 'r') as f:
@@ -59,6 +62,9 @@ locator = WebotsROSRobotGlobalLocator('locator',
     fetch(config, ['world', 'car', 'def'], 'car'),
     fetch(config, ['world', 'supervisor_srv'], '/car/supervisor')
 )
+loader = RecordLoaderQueued('loader',
+    fetch(config, ['load_path'], None)
+)
 controller = RepeatController('controller')
 actuator_computer = WebotsROSAckermannActuatorComputer('actuator_computer',
     fetch(config, ['world', 'get_time_srv'], '/car/robot/get_time'),
@@ -79,7 +85,7 @@ cable_camera_ctrl_image = Cable(
     size = resize[0] * resize[1] + 300,
     distributees = [
         (camera, 'image'),
-        (controller, 'camera_image')
+        (controller, 'processed_image')
     ]
 )
 
@@ -88,6 +94,15 @@ cable_locator_main_gt = Cable(
     latest = True,
     distributees = [
         (locator, 'gt_pose')
+    ]
+)
+
+cable_loader_ctrl_record = Cable(
+    cable_type = 'queue',
+    size = 5,
+    distributees = [
+        (loader, 'output'),
+        (controller, 'record')
     ]
 )
 
@@ -127,6 +142,7 @@ cable_main_ctrl_odom = Cable(
 
 camera.start()
 locator.start()
+loader.start()
 controller.start()
 actuator_computer.start()
 actuator_caller.start()
@@ -160,6 +176,7 @@ while not ros.is_shutdown():
 
 # camera.join()
 # locator.join()
+# loader.join()
 # controller.join()
 # actuator_computer.join()
 # actuator_caller.join()

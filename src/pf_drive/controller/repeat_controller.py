@@ -1,17 +1,17 @@
 import time
 
-import cv_bridge
-
 from multinodes import Node
 
 from pf_drive.util import ROSContext
 
 
 """
-    `camera_image`, input (shared_object)
+    `processed_image`, input (shared_object)
         format: cv2 image (np.array)
     `odom`, input (pipe)
         format: 4x4 np.array
+    `record`, input (queue)
+        format: (image, odom)
     `actuator_command`, output (pipe)
         format:
             (type = 'vw', v, w)
@@ -24,20 +24,16 @@ class RepeatController(Node):
     def run(self):
         ros = ROSContext(self.name)
         ros.init_node(anonymous = False)
-
-        bridge = cv_bridge.CvBridge()
         
         while not ros.is_shutdown():
-            """
-                Test code
-            """
-            if 'camera_image' in self.io:
-                self.io['actuator_command'].write(('vphi', 0.3, 0.02))
-            
-            if 'odom' in self.io and self.io['odom'].poll():
-                print(self.io['odom'].read())
-            
-            if 'camera_image' in self.io and self.io['camera_image'].poll():
-                image_msg = bridge.cv2_to_imgmsg(self.io['camera_image'].read(), 'passthrough')
-                ros.publish_topic('/test_image', image_msg)
+            if 'processed_image' not in self.io or 'odom' not in self.io or 'actuator_command' not in self.io or 'record' not in self.io:
+                time.sleep(0.1)
+                continue
+
+            if self.io['processed_image'].poll() and self.io['odom'].poll() and self.io['record'].poll():
+                image = self.io['processed_image'].read()
+                odom = self.io['odom'].read()
+
+                time.sleep(1)
+                self.io['record'].read()
 

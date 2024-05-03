@@ -14,6 +14,7 @@ class MultinodesException(Exception): pass
     pipe 和 queue 接收一次后皆会弹出该数据，无法做到广播，故建议只连接两个节点 (例外情况例如多个接收节点功能是平行的);
     shared_object 适用于广播，需要指定内存大小，且锁可能降低性能;
     ...
+    queue 读写时会阻塞.
 """
 class Cable:
     def __init__(self, cable_type = 'queue', distributees = [], **kwargs): # distributees = [(node_obj, port_name), ...]
@@ -45,7 +46,7 @@ class Cable:
         if self.cable_type == 'pipe':
             self.pipe_send.send(data)
         elif self.cable_type == 'queue':
-            self.queue.put(data)
+            self.queue.put(data, block = True)
         elif self.cable_type == 'shared_object':
             serialized_data = pickle.dumps(data) # 序列化对象
             serialized_data_length = len(serialized_data) # 序列化后的数据长度
