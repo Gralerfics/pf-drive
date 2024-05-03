@@ -12,7 +12,7 @@ from multinodes import Node
             (type = 'vphi', v, phi)
 """
 class KeyboardAckermannController(Node):
-    def __init__(self, name, is_shutdown_event,
+    def __init__(self, name,
         max_v = 8.0,
         delta_v = 4.0,
         decay_v = 0.3,
@@ -20,7 +20,7 @@ class KeyboardAckermannController(Node):
         delta_phi = 0.3,
         decay_phi = 0.3
     ):
-        super().__init__(name, is_shutdown_event)
+        super().__init__(name)
         self.max_v = max_v
         self.delta_v = delta_v
         self.decay_v = decay_v
@@ -71,7 +71,7 @@ class KeyboardAckermannController(Node):
 
         with keyboard.Listener(on_press = on_press, on_release = on_release) as listener:
             last_t = time.time()
-            while not self.is_shutdown():
+            while True:
                 # 检查接口
                 if 'actuator_command' not in self.io:
                     time.sleep(0.1)
@@ -113,5 +113,6 @@ class KeyboardAckermannController(Node):
                     v = 0
 
                 self.io['actuator_command'].write(('vphi', v, phi)) # 已检查
+                
                 time.sleep(0.05)
 

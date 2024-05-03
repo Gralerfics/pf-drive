@@ -103,14 +103,12 @@ class Cable:
 
 
 class Node(Process):
-    def __init__(self, name, is_shutdown_event):
+    def __init__(self, name):
         super(Node, self).__init__()
+        self.daemon = True
+
         self.name = name
-        self.is_shutdown_event = is_shutdown_event
         self.io = {} # cables
-    
-    def is_shutdown(self):
-        return self.is_shutdown_event.is_set()
 
     def add_cable(self, port_name, cable):
         self.io[port_name] = cable

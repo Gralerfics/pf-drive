@@ -56,7 +56,7 @@ class WebotsRotationalMotorController:
         1. Cable 建议使用 latest = True 的 pipe.
 """
 class WebotsROSAckermannActuator(Node):
-    def __init__(self, name, is_shutdown_event,
+    def __init__(self, name,
         left_front_steer_motor_srv,
         right_front_steer_motor_srv,
         left_rear_motor_srv,
@@ -67,7 +67,7 @@ class WebotsROSAckermannActuator(Node):
         wheel_radius,
         max_steering_angle
     ):
-        super().__init__(name, is_shutdown_event)
+        super().__init__(name)
         
         self.left_front_steer_motor_srv = left_front_steer_motor_srv
         self.right_front_steer_motor_srv = right_front_steer_motor_srv
@@ -125,7 +125,7 @@ class WebotsROSAckermannActuator(Node):
 
         current_time = self.get_time()
         last_time = current_time
-        while not self.is_shutdown() and not self.ros.is_shutdown():
+        while not self.ros.is_shutdown():
             # 检查接口
             if 'command' not in self.io.keys():
                 time.sleep(0.1)
@@ -165,13 +165,12 @@ class WebotsROSAckermannActuator(Node):
             phi_r = np.arctan(self.d / (R - self.l / 2))
             w_rear = v / self.r
 
-            p = mp.Process(target = self.call_services, args = (phi_l, phi_r, w_rear))
-            p.start()
+            # p = mp.Process(target = self.call_services, args = (phi_l, phi_r, w_rear), daemon = True)
+            # p.start()
+            self.call_services(phi_l, phi_r, w_rear)
 
             # 计算里程计
             if 'odom' in self.io.keys():
-                # mp.Process(target = self.calc_and_output_odom, args = (v, R, dt)).start()
+                # mp.Process(target = self.calc_and_output_odom, args = (v, R, dt), daemon = True).start()
                 self.calc_and_output_odom(v, R, dt)
-        
-        p.join()
 

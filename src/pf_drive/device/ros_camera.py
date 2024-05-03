@@ -17,8 +17,8 @@ from pf_drive.util import ROSContext
         format: cv2 image (np.array)
 """
 class ROSCameraWithResizeAndGrayscale(Node):
-    def __init__(self, name, is_shutdown_event, image_topic, resize):
-        super().__init__(name, is_shutdown_event)
+    def __init__(self, name, image_topic, resize):
+        super().__init__(name)
         self.image_topic = image_topic
         self.resize = resize
     
@@ -45,8 +45,8 @@ class ROSCameraWithResizeAndGrayscale(Node):
     `command`, input (rpc)
 """
 class ROSCameraForRecorder(Node):
-    def __init__(self, name, is_shutdown_event, image_topic, resize, patch_size):
-        super().__init__(name, is_shutdown_event)
+    def __init__(self, name, image_topic, resize, patch_size):
+        super().__init__(name)
         self.image_topic = image_topic
         self.resize = resize
         self.patch_size = patch_size

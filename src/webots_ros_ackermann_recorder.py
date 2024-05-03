@@ -2,15 +2,10 @@ import os
 import time
 import json
 import shutil
-import signal
 import argparse
 import multiprocessing as mp
 
 import numpy as np
-
-from nav_msgs.msg import Odometry
-
-# from cv_bridge import CvBridge
 
 from multinodes import Cable
 
@@ -44,31 +39,19 @@ save_path_overwrite = fetch(config, ['save_path_overwrite'], False)
 
 
 """
-    Signal Handler
-"""
-is_shutdown = mp.Event()
-
-def sigint_handler(sig, frame):
-    print('Interrupted.')
-    is_shutdown.set()
-
-signal.signal(signal.SIGINT, sigint_handler)
-
-
-"""
     Nodes
 """
-camera = ROSCameraForRecorder('camera', is_shutdown,
+camera = ROSCameraForRecorder('camera',
     fetch(config, ['world', 'camera', 'image_topic'], '/car/robot/camera'),
     tuple(fetch(config, ['world', 'camera', 'resize'], [150, 50])),
     fetch(config, ['world', 'camera', 'patch_size'], 5)
 )
-locator = WebotsROSRobotGlobalLocator('locator', is_shutdown,
+locator = WebotsROSRobotGlobalLocator('locator',
     fetch(config, ['world', 'car', 'def'], 'car'),
     fetch(config, ['world', 'supervisor_srv'], '/car/supervisor')
 )
-controller = KeyboardAckermannController('controller', is_shutdown)
-actuator = WebotsROSAckermannActuator('actuator', is_shutdown,
+controller = KeyboardAckermannController('controller')
+actuator = WebotsROSAckermannActuator('actuator',
     fetch(config, ['world', 'car', 'left_front_steer_motor'], '/car/left_front_steer_motor'),
     fetch(config, ['world', 'car', 'right_front_steer_motor'], '/car/right_front_steer_motor'),
     fetch(config, ['world', 'car', 'left_rear_motor'], '/car/left_rear_motor'),
@@ -146,7 +129,7 @@ if save_gt_poses:
 odom = None
 last_odom = None
 idx = 0
-while not is_shutdown.is_set():
+while not ros.is_shutdown():
     if cable_odom.poll() and cable_gt_pose.poll():
         odom = cable_odom.read()
         gt_pose = cable_gt_pose.read()
@@ -177,11 +160,8 @@ while not is_shutdown.is_set():
             idx += 1
 
 
-"""
-    Wait for Termination
-"""
-camera.join()
-locator.join()
-controller.join()
-actuator.join()
+# camera.join()
+# locator.join()
+# controller.join()
+# actuator.join()
 

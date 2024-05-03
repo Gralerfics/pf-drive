@@ -17,8 +17,8 @@ from pf_drive.util import ROSContext
     `gt_pose`, output (pipe)
 """
 class WebotsROSRobotGlobalLocator(Node):
-    def __init__(self, name, is_shutdown_event, robot_def, supervisor_srv):
-        super().__init__(name, is_shutdown_event)
+    def __init__(self, name, robot_def, supervisor_srv):
+        super().__init__(name)
         self.robot_def = robot_def
         self.supervisor_srv = supervisor_srv
 
@@ -36,11 +36,11 @@ class WebotsROSRobotGlobalLocator(Node):
 
         # 尝试获取 robot 节点句柄, 注意在 init_node 之后
         self.robot_node_handle = None
-        while self.robot_node_handle is None and not self.is_shutdown() and not self.ros.is_shutdown():
+        while self.robot_node_handle is None and not self.ros.is_shutdown():
             response = self.ros.call_service(self.get_from_def_srv, supervisor_get_from_defRequest(name = self.robot_def, proto = 0))
             self.robot_node_handle = response.node if response is not None else None
         
-        while not self.is_shutdown() and not self.ros.is_shutdown():
+        while not self.ros.is_shutdown():
             if 'gt_pose' not in self.io:
                 time.sleep(0.1)
                 continue
