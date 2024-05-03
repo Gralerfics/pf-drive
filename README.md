@@ -34,7 +34,7 @@ python src/webots_ros_ackermann_record.py [--config, -c ...]
 For example:
 
 ```bash
-python src/webots_ros_ackermann_record.py --config ./config/webots_ros_ackermann_record.json
+python src/webots_ros_ackermann_record.py --config ./config/webots_ros_ackermann_record.json --output /home/gralerfics/MyFiles/Workspace/pf_data/car_x
 ```
 
 3. Start replaying the data:

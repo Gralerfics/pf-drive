@@ -24,13 +24,15 @@ from pf_drive.device import WebotsROSRobotGlobalLocator
 """
 parser = argparse.ArgumentParser()
 parser.add_argument('-c', '--config', type = str, default = './config/record.json')
-parser.add_argument('-o', '--output', type = str, default = './output/record_' + stamp_str() + '/') # config['save_path'] 优先
+parser.add_argument('-o', '--output', type = str, default = None)
 args = parser.parse_args()
 
 config_path = args.config
 config = json.load(open(config_path, 'r'))
-if 'save_path' not in config:
+if args.output is not None:
     config['save_path'] = args.output
+elif 'save_path' not in config:
+    config['save_path'] = './output/record_' + stamp_str() + '/'
 
 resize = tuple(fetch(config, ['world', 'camera', 'resize'], [150, 50]))
 patch_size = fetch(config, ['world', 'camera', 'patch_size'], 5)

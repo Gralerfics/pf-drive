@@ -26,25 +26,24 @@ from pf_drive.storage import RecordLoaderQueued
 """
 parser = argparse.ArgumentParser()
 parser.add_argument('-c', '--config', type = str, default = './config/repeat.json')
-parser.add_argument('-r', '--record', type = str, default = None) # config['load_path'] 优先
-parser.add_argument('-R', '--report', type = str, default = None) # config['report_path'] 优先
+parser.add_argument('-r', '--record', type = str, default = None)
+parser.add_argument('-R', '--report', type = str, default = None)
 args = parser.parse_args()
 
 # 配置文件参数
 config_path = args.config
-
 config = json.load(open(config_path, 'r'))
-if 'load_path' not in config:
-    if args.record is None:
-        raise ValueError('No record path specified.') # TODO
+
+if args.record is not None:
     config['load_path'] = args.record
+elif 'load_path' not in config:
+    raise ValueError('No record path specified.')
 load_path = config['load_path']
 
-if 'report_path' not in config:
-    if args.report is None:
-        config['report_path'] = (load_path if load_path[-1] != '/' else load_path[:-1]) + '_report'
-    else:
-        config['report_path'] = args.report
+if args.report is not None:
+    config['report_path'] = args.report
+elif 'report_path' not in config:
+    config['report_path'] = (load_path if load_path[-1] != '/' else load_path[:-1]) + '_report'
 report_path = config['report_path']
 
 # record 参数
