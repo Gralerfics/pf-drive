@@ -3,12 +3,12 @@ import multiprocessing as mp
 
 from multinodes import Cable
 
-from pf_drive.device.ros_camera import ROSCameraWithResizeAndGrayscale
+from pf_drive.device.ros_camera import ROSCameraWithProcessingAndSending
 from pf_drive.controller.ros_camera_test_controller import ROSCameraTestController
 
 
 if __name__ == '__main__':
-    camera = ROSCameraWithResizeAndGrayscale('camera', '/car/camera/image', (150, 50))
+    camera = ROSCameraWithProcessingAndSending('camera', '/car/camera/image', (150, 50), 5)
     controller = ROSCameraTestController('controller')
 
     cable = Cable(

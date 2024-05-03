@@ -25,7 +25,7 @@
     },
     "save_raw_images": true,
     "save_gt_poses": true,
-    "rotation_threshold": 0.15,
+    "rotation_threshold": 0.05,
     "translation_threshold": 3.0,
     "save_path": "./output",
     "save_path_overwrite": true

@@ -1,4 +1,4 @@
-# python src/webots_ros_ackermann_recorder.py --config ./config/webots_ros_ackermann_record.json
+# python src/webots_ros_ackermann_record.py --config ./config/webots_ros_ackermann_record.json
 
 import os
 import time
@@ -15,7 +15,7 @@ from pf_drive.util import t3d_ext, stamp_str, fetch
 from pf_drive.util import ROSContext
 from pf_drive.actuator import WebotsROSAckermannActuatorComputer, WebotsROSAckermannActuatorCaller
 from pf_drive.controller import KeyboardAckermannController
-from pf_drive.device import ROSCameraForRecorder
+from pf_drive.device import ROSCameraWithProcessingAndSaving
 from pf_drive.device import WebotsROSRobotGlobalLocator
 
 
@@ -24,13 +24,13 @@ from pf_drive.device import WebotsROSRobotGlobalLocator
 """
 parser = argparse.ArgumentParser()
 parser.add_argument('-c', '--config', type = str, default = './config/record.json')
-parser.add_argument('-o', '--output', type = str, default = None)
+parser.add_argument('-o', '--output', type = str, default = './output/record_' + stamp_str() + '/') # config['save_path'] 优先
 args = parser.parse_args()
 
 config_path = args.config
 config = json.load(open(config_path, 'r'))
 if 'save_path' not in config:
-    config['save_path'] = args.output if args.output else './output/record_' + stamp_str() + '/'
+    config['save_path'] = args.output
 
 resize = tuple(fetch(config, ['world', 'camera', 'resize'], [150, 50]))
 patch_size = fetch(config, ['world', 'camera', 'patch_size'], 5)
@@ -47,7 +47,7 @@ save_path_overwrite = fetch(config, ['save_path_overwrite'], False)
 """
     Nodes
 """
-camera = ROSCameraForRecorder('camera',
+camera = ROSCameraWithProcessingAndSaving('camera',
     fetch(config, ['world', 'camera', 'image_topic'], '/car/camera/image'),
     resize,
     patch_size

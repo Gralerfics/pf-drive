@@ -1,0 +1,20 @@
+{
+    "world": {
+        "camera": {
+            "image_topic": "/car/camera/image"
+        },
+        "car": {
+            "def": "car"
+        },
+        "odometry": {
+            "odom_output_topic": "/car/odom"
+        },
+        "supervisor_srv": "/car/supervisor"
+    },
+    "match_offset_radius": 90,
+    "along_path_radius": 2,
+    "k_rotation": 0.06,
+    "k_along_path": 0.1,
+    "distance_threshold": 0.2,
+    "angle_threshold": 0.1
+}
