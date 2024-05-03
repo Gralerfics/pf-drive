@@ -172,7 +172,6 @@ def NCC_horizontal_match(img, img_ref):
     offset = np.argmax(values)
     return offset - (len(values) - 1) / 2, values[offset]
 
-
 # propective_offset = 70 # positive: counter-clockwise (objects move right from img_ref to img)
 
 # img_ref = np.random.rand(50, 150)

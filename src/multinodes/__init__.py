@@ -42,7 +42,7 @@ class Cable:
         
         self.distribute(distributees)
     
-    def write(self, data, block = True): # block only for queue (and rpc)
+    def write(self, data, block = True): # block for queue (rpc)
         if self.cable_type == 'pipe':
             self.pipe_send.send(data)
         elif self.cable_type == 'queue':
@@ -66,7 +66,7 @@ class Cable:
 
     def read(self, block = True):
         if self.cable_type == 'pipe':
-            res = self.pipe_recv.recv()
+            res = self.pipe_recv.recv() # 自带阻塞
             if self.latest:
                 while self.pipe_recv.poll():
                     res = self.pipe_recv.recv()
