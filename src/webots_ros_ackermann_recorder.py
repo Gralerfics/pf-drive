@@ -1,3 +1,5 @@
+# python src/webots_ros_ackermann_recorder.py --config ./config/webots_ros_ackermann_record.json
+
 import os
 import time
 import json
@@ -20,7 +22,6 @@ from pf_drive.device import WebotsROSRobotGlobalLocator
 """
     Arguments and Configurations
 """
-# python src/webots_ros_ackermann_recorder.py --config ./config/webots_ros_ackermann_record.json
 parser = argparse.ArgumentParser()
 parser.add_argument('-c', '--config', type = str, default = './config/record.json')
 parser.add_argument('-o', '--output', type = str, default = None)
@@ -31,8 +32,13 @@ config = json.load(open(config_path, 'r'))
 if 'save_path' not in config:
     config['save_path'] = args.output if args.output else './output/record_' + stamp_str() + '/'
 
+resize = tuple(fetch(config, ['world', 'camera', 'resize'], [150, 50]))
+patch_size = fetch(config, ['world', 'camera', 'patch_size'], 5)
+horizontal_fov = fetch(config, ['world', 'camera', 'horizontal_fov'], 44.97)
+
 rotation_threshold = fetch(config, ['rotation_threshold'], 0.12)
-translation_threshold_square = fetch(config, ['translation_threshold'], 3.0) ** 2
+translation_threshold = fetch(config, ['translation_threshold'], 3.0)
+
 save_raw_images = fetch(config, ['save_raw_images'], False)
 save_gt_poses = fetch(config, ['save_gt_poses'], False)
 save_path_overwrite = fetch(config, ['save_path_overwrite'], False)
@@ -42,9 +48,9 @@ save_path_overwrite = fetch(config, ['save_path_overwrite'], False)
     Nodes
 """
 camera = ROSCameraForRecorder('camera',
-    fetch(config, ['world', 'camera', 'image_topic'], '/car/robot/camera'),
-    tuple(fetch(config, ['world', 'camera', 'resize'], [150, 50])),
-    fetch(config, ['world', 'camera', 'patch_size'], 5)
+    fetch(config, ['world', 'camera', 'image_topic'], '/car/camera/image'),
+    resize,
+    patch_size
 )
 locator = WebotsROSRobotGlobalLocator('locator',
     fetch(config, ['world', 'car', 'def'], 'car'),
@@ -137,9 +143,21 @@ if save_gt_poses:
     save_gt_pose_folder = os.path.join(config['save_path'], 'gt_pose/')
     os.makedirs(save_gt_pose_folder, exist_ok = True)
 
+# 录制参数
+with open(os.path.join(config['save_path'], 'parameters.json'), 'w') as f:
+    json.dump({
+        "image": {
+            "resize": resize,
+            "patch_size": patch_size,
+            "horizontal_fov": horizontal_fov
+        },
+        "rotation_threshold": rotation_threshold,
+        "translation_threshold": translation_threshold,
+    }, f)
+
 # 主循环
-odom = None
-last_odom = None
+translation_threshold_square = translation_threshold ** 2
+odom, last_odom = None, None
 idx = 0
 while not ros.is_shutdown():
     if cable_odom.poll() and cable_gt_pose.poll():

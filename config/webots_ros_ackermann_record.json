@@ -2,8 +2,8 @@
     "world": {
         "camera": {
             "image_topic": "/car/camera/image",
-            "patch_size": 5,
             "resize": [150, 50],
+            "patch_size": 5,
             "horizontal_fov": 44.97
         },
         "odometry": {
