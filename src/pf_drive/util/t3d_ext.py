@@ -98,7 +98,7 @@ R2yaw = R_to_yaw
 
 
 """
-    与 ROS Message 等的转换.
+    各类转换.
 """
 def euclidean_to_Odometry(T, frame_id = '', stamp = None):
     msg = Odometry()
@@ -146,4 +146,9 @@ def euclideans_to_Path(T_list, frame_id = ''):
     return msg
 
 es2P = euclideans_to_Path
+
+def euclidean_to_kitti(T):
+    return ' '.join([str(x) for x in np.array(T[:-1, :]).reshape(1, -1)[0]])
+
+e2kitti = euclidean_to_kitti
 

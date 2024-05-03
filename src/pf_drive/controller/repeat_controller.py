@@ -20,6 +20,8 @@ from pf_drive.util import NCC_horizontal_match
         format: 4x4 np.array
     `record`, input (queue)
         format: (image, odom)
+    `passed_goal`, output (queue)
+        format: int
     `actuator_command`, output (pipe)
         format:
             (type = 'vw', v, w)
@@ -31,7 +33,6 @@ class BaselineRepeatController(Node):
         
         # 参数
         self.horizontal_fov = kwargs['horizontal_fov']
-        self.match_offset_radius = kwargs['match_offset_radius'] # 暂时没用到
         self.along_path_radius = kwargs['along_path_radius'] # r
         self.predict_number = kwargs['predict_number'] # p
         self.k_rotation = kwargs['k_rotation']
@@ -63,8 +64,10 @@ class BaselineRepeatController(Node):
         # loader 读完后不断发送 None, 此处不断入队, 直到 q_passed_idx + 1 项也为 None 时即结束
         self.q.push(self.io['record'].read(block = True))
 
-        # 更新 passed_goal
+        # 更新 passed_goal 并输出到端口
         self.goal_idx += 1
+        if self.goal_idx >= 0:
+            self.io['passed_goal'].write(self.goal_idx)
 
         # rec_A, rec_B 有效则更新 T_0_odomA, T_0_odomB
         if self.q[self.q_r] is not None and self.q[self.q_r + 1] is not None:
@@ -73,8 +76,7 @@ class BaselineRepeatController(Node):
                 self.T_0_odomB = self.io['odom'].read(block = True)
             
             self.T_0_odomA = self.T_0_odomB
-            T_odomA_odomB = t3d_ext.einv(self.q[self.q_r][1]) @ self.q[self.q_r + 1][1]
-                # T_odomA_odomB = T_{rec_r}_{rec_(r+1)} = inv(T_0_{rec_r}) * T_0_{rec_(r+1)}
+            T_odomA_odomB = t3d_ext.einv(self.q[self.q_r][1]) @ self.q[self.q_r + 1][1] # T_odomA_odomB = T_{rec_r}_{rec_(r+1)} = inv(T_0_{rec_r}) * T_0_{rec_(r+1)}
             self.T_0_odomB = self.T_0_odomA @ T_odomA_odomB
 
         # 最新入队两个元素有效则更新 goal_distances
@@ -89,7 +91,7 @@ class BaselineRepeatController(Node):
 
         # 检查接口
         while not ros.is_shutdown():
-            if 'processed_image' not in self.io or 'odom' not in self.io or 'actuator_command' not in self.io or 'record' not in self.io:
+            if 'processed_image' not in self.io or 'odom' not in self.io or 'actuator_command' not in self.io or 'passed_goal' not in self.io or 'record' not in self.io:
                 time.sleep(0.1)
                 continue
             break
@@ -116,8 +118,8 @@ class BaselineRepeatController(Node):
             # 结束
             if self.q[r] is not None and self.q[r + 1] is None:
                 print('Finished.')
-                self.io['actuator_command'].write(('vw', 0, 0))
-                # TODO: 保存 report
+                self.io['actuator_command'].write(('vw', 0, 0)) # 停车
+                self.io['passed_goal'].write(None) # 结束信号
                 break
             
             # 运算
@@ -174,7 +176,7 @@ class BaselineRepeatController(Node):
                     theta_R = (1 - u) * theta_A + u * theta_B
                     rotation_correction = -self.k_rotation * dt * theta_R
 
-                    # 修正 T_0_odomB
+                    # 优化 T_0_odomB
                     correction_offset = t3d_ext.etR([0, 0, 0], t3d.euler.euler2mat(0, 0, rotation_correction)) @ T_odomR_odomB
                     correction_offset[:3, 3] *= along_path_correction
                     self.T_0_odomB = T_0_odomR @ correction_offset
@@ -183,7 +185,7 @@ class BaselineRepeatController(Node):
                 pass
                 
                 # TODO: delta distance 判断 (required?)
-                T_odomR_odomB = t3d_ext.einv(T_0_odomR) @ self.T_0_odomB # 经过校正, 与 pass_to_next_goal 中的 T_odomA_odomB 不同
+                # T_odomR_odomB = t3d_ext.einv(T_0_odomR) @ self.T_0_odomB # 经过校正, 与 pass_to_next_goal 中的 T_odomA_odomB 不同
                 
                 # 发布调试话题
                 ros.publish_topic('/a', t3d_ext.e2PS(self.T_0_odomA, frame_id = 'odom'))
@@ -191,8 +193,7 @@ class BaselineRepeatController(Node):
                 ros.publish_topic('/r', t3d_ext.e2PS(T_0_odomR, frame_id = 'odom'))
                 
                 # TODO: actuator_command
-                # v = 0.1
-                v = 7.2
+                v = 9.0
 
                 T_0_qN = [T for T in self.q.q[r:(r + 3)] if T is not None][-1][1]
                 T_0_qB = self.q[r + 1][1]

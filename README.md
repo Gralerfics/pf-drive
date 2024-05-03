@@ -15,18 +15,51 @@ TODO
 
 ## Usages
 
-### 启动
+### Launch
 
-TODO
+#### Ackermann Car In Webots
 
-### 评估
+1. Start the simulator:
 
-TODO
+```bash
+roslaunch pf_drive ackermann_wbt.launch
+```
+
+2. Start recording the data:
+
+```bash
+python src/webots_ros_ackermann_record.py [--config, -c ...]
+```
+
+For example:
+
+```bash
+python src/webots_ros_ackermann_record.py --config ./config/webots_ros_ackermann_record.json
+```
+
+3. Start replaying the data:
+
+```bash
+python src/webots_ros_ackermann_repeat.py [--config, -c ...] [--record, -r ...]
+```
+
+For example:
+
+```bash
+python src/webots_ros_ackermann_repeat.py --config ./config/webots_ros_ackermann_repeat.json --record /home/gralerfics/MyFiles/Workspace/pf_data/car_2
+```
+
+### Evaluate
+
+#### evo
+
+```bash
+evo_traj kitti repeat_traj.txt --ref=record_traj.txt -p --plot_mode=xy
+evo_ape kitti record_traj.txt repeat_traj.txt --plot --plot_mode=xy
+```
 
 ## Notes
 
-### 备忘
-
-内部尽量使用旋转矩阵而非四元数。
+### Memo
 
 TODO

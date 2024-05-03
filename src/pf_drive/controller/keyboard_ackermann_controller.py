@@ -13,7 +13,7 @@ from multinodes import Node
 """
 class KeyboardAckermannController(Node):
     def __init__(self, name,
-        max_v = 8.0,
+        max_v = 10.0,
         delta_v = 4.0,
         decay_v = 0.3,
         max_phi = 0.48,
