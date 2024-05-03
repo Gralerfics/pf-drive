@@ -7,22 +7,24 @@ from multinodes import Cable
 
 from pf_drive.util import t3d_ext
 from pf_drive.util import ROSContext
-from pf_drive.controller.keyboard_ackermann_controller import KeyboardAckermannController
-from pf_drive.actuator.webots_ros_ackermann_actuator import WebotsROSAckermannActuator
+from pf_drive.controller import KeyboardAckermannController
+from pf_drive.actuator import WebotsROSAckermannActuatorComputer, WebotsROSAckermannActuatorCaller
 
 
 if __name__ == '__main__':
     controller = KeyboardAckermannController('controller')
-    actuator = WebotsROSAckermannActuator('actuator',
-        '/car/left_front_steer_motor',
-        '/car/right_front_steer_motor',
-        '/car/left_rear_motor',
-        '/car/right_rear_motor',
+    actuator_computer = WebotsROSAckermannActuatorComputer('actuator_computer',
         '/car/robot/get_time',
         1.628,
         2.995,
         0.38,
         0.78
+    )
+    actuator_caller = WebotsROSAckermannActuatorCaller('actuator_caller',
+        '/car/left_front_steer_motor',
+        '/car/right_front_steer_motor',
+        '/car/left_rear_motor',
+        '/car/right_rear_motor'
     )
 
     cable_actuator_command = Cable(
@@ -30,7 +32,7 @@ if __name__ == '__main__':
         latest = True,
         distributees = [
             (controller, 'actuator_command'),
-            (actuator, 'command')
+            (actuator_computer, 'command')
         ]
     )
 
@@ -40,12 +42,22 @@ if __name__ == '__main__':
         cable_type = 'pipe',
         latest = True,
         distributees = [
-            (actuator, 'odom')
+            (actuator_caller, 'odom')
+        ]
+    )
+
+    cable_actuator_param = Cable(
+        cable_type = 'pipe',
+        latest = True,
+        distributees = [
+            (actuator_computer, 'param'),
+            (actuator_caller, 'param')
         ]
     )
 
     controller.start()
-    actuator.start()
+    actuator_computer.start()
+    actuator_caller.start()
 
     ros = ROSContext('main_test_ackermann')
     ros.init_node(anonymous = False)
@@ -57,5 +69,6 @@ if __name__ == '__main__':
             ros.publish_topic('/car/odom', t3d_ext.e2O(odom, frame_id = 'odom', stamp = ros.time()), queue_size = 1)
     
     # controller.join()
-    # actuator.join()
+    # actuator_computer.join()
+    # actuator_caller.join()
 

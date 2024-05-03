@@ -11,8 +11,8 @@ from multinodes import Cable
 
 from pf_drive.util import t3d_ext, stamp_str, fetch
 from pf_drive.util import ROSContext
-from pf_drive.actuator.webots_ros_ackermann_actuator import WebotsROSAckermannActuator
-from pf_drive.controller.keyboard_ackermann_controller import KeyboardAckermannController
+from pf_drive.actuator import WebotsROSAckermannActuatorComputer, WebotsROSAckermannActuatorCaller
+from pf_drive.controller import KeyboardAckermannController
 from pf_drive.device import ROSCameraForRecorder
 from pf_drive.device import WebotsROSRobotGlobalLocator
 
@@ -51,16 +51,18 @@ locator = WebotsROSRobotGlobalLocator('locator',
     fetch(config, ['world', 'supervisor_srv'], '/car/supervisor')
 )
 controller = KeyboardAckermannController('controller')
-actuator = WebotsROSAckermannActuator('actuator',
-    fetch(config, ['world', 'car', 'left_front_steer_motor'], '/car/left_front_steer_motor'),
-    fetch(config, ['world', 'car', 'right_front_steer_motor'], '/car/right_front_steer_motor'),
-    fetch(config, ['world', 'car', 'left_rear_motor'], '/car/left_rear_motor'),
-    fetch(config, ['world', 'car', 'right_rear_motor'], '/car/right_rear_motor'),
+actuator_computer = WebotsROSAckermannActuatorComputer('actuator_computer',
     fetch(config, ['world', 'get_time_srv'], '/car/robot/get_time'),
     fetch(config, ['world', 'car', 'track'], 1.628),
     fetch(config, ['world', 'car', 'wheelbase'], 2.995),
     fetch(config, ['world', 'car', 'wheel_radius'], 0.38),
     fetch(config, ['world', 'car', 'max_steering_angle'], 0.6)
+)
+actuator_caller = WebotsROSAckermannActuatorCaller('actuator_caller',
+    fetch(config, ['world', 'car', 'left_front_steer_motor'], '/car/left_front_steer_motor'),
+    fetch(config, ['world', 'car', 'right_front_steer_motor'], '/car/right_front_steer_motor'),
+    fetch(config, ['world', 'car', 'left_rear_motor'], '/car/left_rear_motor'),
+    fetch(config, ['world', 'car', 'right_rear_motor'], '/car/right_rear_motor')
 )
 
 cable_camera_image_save = Cable(
@@ -84,7 +86,7 @@ cable_actuator_command = Cable(
     latest = True,
     distributees = [
         (controller, 'actuator_command'),
-        (actuator, 'command')
+        (actuator_computer, 'command')
     ]
 )
 
@@ -92,14 +94,24 @@ cable_odom = Cable(
     cable_type = 'pipe',
     latest = True,
     distributees = [
-        (actuator, 'odom')
+        (actuator_computer, 'odom')
+    ]
+)
+
+cable_actuator_param = Cable(
+    cable_type = 'pipe',
+    latest = True,
+    distributees = [
+        (actuator_computer, 'param'),
+        (actuator_caller, 'param')
     ]
 )
 
 camera.start()
 locator.start()
 controller.start()
-actuator.start()
+actuator_computer.start()
+actuator_caller.start()
 
 
 """
@@ -163,5 +175,6 @@ while not ros.is_shutdown():
 # camera.join()
 # locator.join()
 # controller.join()
-# actuator.join()
+# actuator_computer.join()
+# actuator_caller.join()
 
