@@ -149,7 +149,8 @@ def horizontal_cumsum(image, width):
 	return cumsum[(width - 1):] - cumsum[:(1 - width)]
 
 def NCC_horizontal_scan(img, img_ref):
-    img = np.pad(img, ((0, ), (int(img.shape[1] / 2), )), mode = 'constant', constant_values = 0)
+    img = np.pad(img.astype(float) / 256.0, ((0, ), (int(img.shape[1] / 2), )), mode = 'constant', constant_values = 0)
+    img_ref = img_ref.astype(float) / 256.0
 
     img_delta = img - img.mean()
     img_ref_delta = img_ref - img_ref.mean()
@@ -159,6 +160,7 @@ def NCC_horizontal_scan(img, img_ref):
     I_squared = horizontal_cumsum(img ** 2, img_ref.shape[1])
 
     denominator = np.sqrt((I_squared - I_hat ** 2 / img_ref.size) * (img_ref_delta ** 2).sum())
+    
     with np.errstate(divide = 'raise', invalid = 'raise'):
         try:
             res = (numerator / denominator)[0]
@@ -170,7 +172,7 @@ def NCC_horizontal_scan(img, img_ref):
 def NCC_horizontal_match(img, img_ref):
     values = NCC_horizontal_scan(img, img_ref)
     offset = np.argmax(values)
-    return offset - (len(values) - 1) / 2, values[offset]
+    return int(offset - (len(values) - 1) / 2), values[offset]
 
 # propective_offset = 70 # positive: counter-clockwise (objects move right from img_ref to img)
 

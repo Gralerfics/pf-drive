@@ -53,6 +53,12 @@ resize = tuple(fetch(config, ['world', 'camera', 'resize'], [150, 50]))
 patch_size = fetch(config, ['world', 'camera', 'patch_size'], 5)
 horizontal_fov = fetch(config, ['world', 'camera', 'horizontal_fov'], 44.97)
 
+track = fetch(config, ['world', 'car', 'track'], 1.628)
+wheelbase = fetch(config, ['world', 'car', 'wheelbase'], 2.995)
+wheel_radius = fetch(config, ['world', 'car', 'wheel_radius'], 0.38)
+max_steering_angle = fetch(config, ['world', 'car', 'max_steering_angle'], 0.6)
+R_min_abs = wheelbase / np.tan(max_steering_angle) + track / 2
+
 
 """
     Nodes
@@ -70,11 +76,15 @@ loader = RecordLoaderQueued('loader',
     load_path
 )
 controller = BaselineRepeatController('controller',
+    horizontal_fov = horizontal_fov,
     match_offset_radius = fetch(config, ['match_offset_radius'], 90),
     along_path_radius = fetch(config, ['along_path_radius'], 2),
     predict_number = fetch(config, ['predict_number'], 5),
     k_rotation = fetch(config, ['k_rotation'], 0.06),
-    k_along_path = fetch(config, ['k_along_path'], 0.1)
+    k_along_path = fetch(config, ['k_along_path'], 0.1),
+    distance_threshold = fetch(config, ['distance_threshold'], 0.2),
+    angle_threshold = fetch(config, ['angle_threshold'], 0.1),
+    R_min_abs = R_min_abs
 )
 actuator_computer = WebotsROSAckermannActuatorComputer('actuator_computer',
     fetch(config, ['world', 'get_time_srv'], '/car/robot/get_time'),
