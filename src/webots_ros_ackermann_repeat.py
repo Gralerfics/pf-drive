@@ -11,7 +11,7 @@ import numpy as np
 
 from multinodes import Cable
 
-from pf_drive.util import t3d_ext, stamp_str, fetch
+from pf_drive.util import t3d_ext, stamp_str, fetch, get_numbered_file_list
 from pf_drive.util import ROSContext
 from pf_drive.actuator import WebotsROSAckermannActuatorComputer, WebotsROSAckermannActuatorCaller
 from pf_drive.controller import RepeatController
@@ -49,6 +49,8 @@ resize = tuple(fetch(config, ['world', 'camera', 'resize'], [150, 50]))
 patch_size = fetch(config, ['world', 'camera', 'patch_size'], 5)
 horizontal_fov = fetch(config, ['world', 'camera', 'horizontal_fov'], 44.97)
 
+load_path = config['load_path']
+
 
 """
     Nodes
@@ -63,7 +65,7 @@ locator = WebotsROSRobotGlobalLocator('locator',
     fetch(config, ['world', 'supervisor_srv'], '/car/supervisor')
 )
 loader = RecordLoaderQueued('loader',
-    fetch(config, ['load_path'], None)
+    load_path
 )
 controller = RepeatController('controller')
 actuator_computer = WebotsROSAckermannActuatorComputer('actuator_computer',
@@ -156,6 +158,22 @@ ros = ROSContext('webots_ros_ackermann_recorder')
 ros.init_node(anonymous = False)
 odom_topic = fetch(config, ['world', 'odometry', 'odom_output_topic'], '/car/odom')
 
+# 发布 /recorded_gts, /recorded_odoms
+odom_load_path = os.path.join(load_path, 'odom')
+gt_pose_load_path = os.path.join(load_path, 'gt_pose')
+record_odoms = []
+record_gts = []
+for filename in get_numbered_file_list(odom_load_path):
+    with open(os.path.join(odom_load_path, filename), 'r') as f:
+        record_odoms.append(np.array(json.load(f)))
+for filename in get_numbered_file_list(gt_pose_load_path):
+    with open(os.path.join(gt_pose_load_path, filename), 'r') as f:
+        record_gts.append(np.array(json.load(f)))
+
+from geometry_msgs.msg import PoseStamped
+ros.publish_topic('/recorded_odoms', t3d_ext.es2P(record_odoms, frame_id = 'odom'))
+ros.publish_topic('/recorded_gts', t3d_ext.es2P(record_gts, frame_id = 'map'))
+
 # 主循环
 odom, last_odom = None, None
 idx = 0
@@ -169,9 +187,6 @@ while not ros.is_shutdown():
         ros.publish_topic(odom_topic, t3d_ext.e2O(odom, frame_id = 'odom', stamp = ros.time())) # only for rviz
         T_map_odom = np.dot(gt_pose, t3d_ext.einv(odom))
         ros.publish_tf(T_map_odom, 'map', 'odom')
-
-        # a
-        pass
 
 
 # camera.join()

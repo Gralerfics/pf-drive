@@ -4,8 +4,8 @@ import numpy as np
 
 import transforms3d as t3d
 
-from nav_msgs.msg import Odometry
-from geometry_msgs.msg import Pose, Point, Quaternion
+from nav_msgs.msg import Odometry, Path
+from geometry_msgs.msg import Pose, Point, Quaternion, PoseStamped
 
 
 """
@@ -13,7 +13,7 @@ from geometry_msgs.msg import Pose, Point, Quaternion
         t3d.affines.compose(t, t3d.quaternions.quat2mat(q), np.ones(3))
     的 0.5 至 1 倍, 故 ext.
 """
-def euclidean_compose_tq(t, q):
+def euclidean_compose_tq_wxyz(t, q):
     res = np.zeros((4, 4))
     res[:3, :3] = t3d.quaternions.quat2mat(q)
     res[:3, 3] = t
@@ -27,7 +27,7 @@ def euclidean_compose_tR(t, R):
     res[3, 3] = 1
     return res
 
-etq = euclidean_compose_tq
+etq_wxyz = euclidean_compose_tq_wxyz
 etR = euclidean_compose_tR
 
 def euclidean_decompose_t(T):
@@ -106,18 +106,44 @@ def euclidean_to_Odometry(T, frame_id = '', stamp = None):
     if stamp is not None:
         msg.header.stamp = stamp
     msg.pose.pose = Pose(
-        position = Point(*edt(T)),
-        orientation = Quaternion(*edq_xyzw(T))
+        position = Point(*euclidean_decompose_t(T)),
+        orientation = Quaternion(*euclidean_decompose_q_xyzw(T))
     )
     return msg
 
 def Odometry_to_euclidean(msg):
     # 注意 t3d 中的 quat 顺序是 (w, x, y, z)
-    return euclidean_compose_tq(
+    return euclidean_compose_tq_wxyz(
         np.array([msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z]),
         np.array([msg.pose.pose.orientation.w, msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z])
     )
 
 e2O = euclidean_to_Odometry
 O2e = Odometry_to_euclidean
+
+def euclidean_to_PoseStamped(T, frame_id = ''):
+    msg = PoseStamped()
+    msg.header.frame_id = frame_id
+    msg.pose = Pose(
+        position = Point(*euclidean_decompose_t(T)),
+        orientation = Quaternion(*euclidean_decompose_q_xyzw(T))
+    )
+    return msg
+
+def PoseStamped_to_euclidean(msg):
+    return euclidean_compose_tq_wxyz(
+        np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z]),
+        np.array([msg.pose.orientation.w, msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z])
+    )
+
+e2PS = euclidean_to_PoseStamped
+PS2e = PoseStamped_to_euclidean
+
+def euclideans_to_Path(T_list, frame_id = ''):
+    msg = Path()
+    msg.header.frame_id = frame_id
+    msg.poses = [euclidean_to_PoseStamped(T, frame_id) for T in T_list]
+    return msg
+
+es2P = euclideans_to_Path
 

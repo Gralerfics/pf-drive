@@ -59,7 +59,7 @@ class WebotsROSRobotGlobalLocator(Node):
                 continue
             q = np.array([response.orientation.w, response.orientation.x, response.orientation.y, response.orientation.z]) # wxyz in t3d
             
-            T = t3d_ext.etq(t, q)
+            T = t3d_ext.etq_wxyz(t, q)
             self.io['gt_pose'].write(T)
 
             time.sleep(0.02)

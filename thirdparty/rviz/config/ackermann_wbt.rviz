@@ -6,6 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /Odometry1/Shape1
+        - /Rec_Odoms1/Status1
       Splitter Ratio: 0.5714285969734192
     Tree Height: 604
   - Class: rviz/Selection
@@ -141,9 +142,8 @@ Visualization Manager:
           appearance_9:
             {}
         map:
-          {}
-        odom:
-          {}
+          odom:
+            {}
         right_front_wheel:
           appearance_7:
             {}
@@ -246,7 +246,7 @@ Visualization Manager:
         Z: 0
       Pose Color: 255; 85; 255
       Pose Style: None
-      Queue Size: 10
+      Queue Size: 1
       Radius: 0.029999999329447746
       Shaft Diameter: 0.10000000149011612
       Shaft Length: 0.10000000149011612
@@ -270,7 +270,7 @@ Visualization Manager:
         Z: 0
       Pose Color: 255; 85; 255
       Pose Style: None
-      Queue Size: 10
+      Queue Size: 1
       Radius: 0.029999999329447746
       Shaft Diameter: 0.10000000149011612
       Shaft Length: 0.10000000149011612
@@ -385,7 +385,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 97.71755981445312
+      Distance: 82.93626403808594
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -393,15 +393,15 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 5.903793811798096
-        Y: 16.741025924682617
-        Z: 12.281608581542969
+        X: 4.533278465270996
+        Y: 15.15981674194336
+        Z: 14.596427917480469
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7047974467277527
+      Pitch: 0.6997974514961243
       Target Frame: <Fixed Frame>
       Yaw: 1.1967576742172241
     Saved: ~

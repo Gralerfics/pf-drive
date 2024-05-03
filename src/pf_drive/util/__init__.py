@@ -62,7 +62,7 @@ class ROSContext:
     def publish_topic(self, topic, msg, queue_size = 100): # queue_size 适当调大, 否则高速发布下可能丢包
         if topic not in self.publishers:
             self.publishers[topic] = rospy.Publisher(topic, type(msg), queue_size = queue_size)
-            # time.sleep(0.5) # 等待一小会时间, 否则前半段 rviz 似乎存在收不到的可能
+            time.sleep(0.5) # 创建 Publisher 后需要等待一段时间, 否则可能会丢包
         self.publishers[topic].publish(msg)
     
     def subscribe_topic(self, topic, msg_type, callback, queue_size = None): # .spin() required
