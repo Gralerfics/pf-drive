@@ -139,6 +139,10 @@ class ROSContext:
     
     def spin(self):
         rospy.spin()
+    
+    # def spin_once(self, duration = 0.01): # ?
+    #     if not rospy.core.is_shutdown():
+    #         rospy.rostime.wallsleep(duration)
 
 
 """

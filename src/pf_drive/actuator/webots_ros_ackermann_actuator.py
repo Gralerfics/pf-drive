@@ -56,10 +56,11 @@ class WebotsRotationalMotorController:
     `param`, output (any)
         format:
             [phi_l, phi_r, w_rear]
-    TODO:
-        目前里程计由速度指令开环估计, 而不是由传感器得到 (加速度约 3 ~ 4 m/s^2, 速度突变会导致较大误差);
-        考虑到 controller 可能需要闭环里程计的信息以估计自身实际速度而非指令速度, 后续需要修改此处;
-        这应该也是起步时有过快回缩情况的原因.
+    Notes:
+        之前里程计由速度指令开环估计, 而不是由传感器得到 (加速度约 3 ~ 4 m/s^2, 速度突变会导致较大误差);
+        考虑到 controller 可能需要闭环里程计的信息以估计自身实际速度而非指令速度, 因此改为由轮速计加上转向指令得到里程计.
+        record 过程使用了该里程计应该也是起步时有过快回缩情况的原因 (car_1 ~ 4).
+            Update: 新录制的数据 (car_5) 仍然有起步问题, 原因待查. TODO
 """
 class WebotsROSAckermannActuatorComputer(Node):
     def __init__(self, name,
@@ -68,11 +69,14 @@ class WebotsROSAckermannActuatorComputer(Node):
         wheelbase,
         wheel_radius,
         max_steering_angle,
-        debug_topic = False
+        left_rear_motor_velocity_srv = '/car/left_rear_motor/get_velocity', # TODO
+        right_rear_motor_velocity_srv = '/car/right_rear_motor/get_velocity'
     ):
         super().__init__(name)
 
         self.get_time_srv = get_time_srv
+        self.left_rear_motor_velocity_srv = left_rear_motor_velocity_srv
+        self.right_rear_motor_velocity_srv = right_rear_motor_velocity_srv
 
         self.l = track
         self.d = wheelbase
@@ -81,20 +85,41 @@ class WebotsROSAckermannActuatorComputer(Node):
 
         self.R_min_abs = self.d / np.tan(self.max_phi) + self.l / 2
 
-        self.debug_topic = debug_topic
-
         self.odom = np.eye(4)
-        self.v_last = 0
-        self.R_last = 1e9
+        self.v_rec = 0
+        self.R_rec = 1e9
 
         self.ros = ROSContext(self.name)
         self.ros.register_service(self.get_time_srv, get_float)
+        self.ros.register_service(left_rear_motor_velocity_srv, get_float)
+        self.ros.register_service(right_rear_motor_velocity_srv, get_float)
 
     def get_time(self):
         response = self.ros.call_service(self.get_time_srv, get_floatRequest(0))
         return response.value if response is not None else None
     
-    def calc_and_output_odom(self, v, R, dt):
+    def get_rear_velocity(self):
+        response = self.ros.call_service(self.left_rear_motor_velocity_srv, get_floatRequest(0))
+        if response is None:
+            return 0
+        w_l = response.value
+
+        # TODO: 初始时会一直是 135.0, 临时解决方案: 6 位小数为 0 则舍弃.
+        if int(abs(w_l - int(w_l)) * 1000000) == 0:
+            return 0
+
+        response = self.ros.call_service(self.right_rear_motor_velocity_srv, get_floatRequest(0))
+        if response is None:
+            return 0
+        w_r = response.value
+
+        # TODO
+        if int(abs(w_l - int(w_l)) * 1000000) == 0:
+            return 0
+        
+        return self.r * (w_l + w_r) / 2
+    
+    def update_odom(self, v, R, dt):
         dist = v * dt
         odom_R = t3d_ext.edR(self.odom)
 
@@ -110,16 +135,14 @@ class WebotsROSAckermannActuatorComputer(Node):
 
             self.odom[:3, :3] = np.dot(rot, odom_R)
             self.odom[:3, 3] += PR + RT
-        
-        self.io['odom'].write(self.odom) # 外部已经确保 odom 接口存在
     
     def run(self):
         self.ros.init_node(anonymous = False) # 不可在 __init__ 中调用，否则会导致和 main 中的 init_node 冲突
-
+        
         current_time = self.get_time()
         last_time = current_time
         while not self.ros.is_shutdown():
-            # 计算里程计 (不受 command 影响, 有无 command 都会计算里程计)
+            # 里程计 (不受 command 影响, 有无 command 都会计算里程计)
             current_time = self.get_time()
             if current_time is None or last_time is None:
                 last_time = current_time
@@ -128,7 +151,9 @@ class WebotsROSAckermannActuatorComputer(Node):
             last_time = current_time
 
             if 'odom' in self.io.keys():
-                self.calc_and_output_odom(self.v_last, self.R_last, dt)
+                # self.update_odom(self.v_rec, self.R_rec, dt) # 指令开环
+                self.update_odom(self.get_rear_velocity(), self.R_rec, dt) # 轮速 + 转向指令
+                self.io['odom'].write(self.odom)
             
             # 检查接口
             if 'command' in self.io.keys():
@@ -159,20 +184,12 @@ class WebotsROSAckermannActuatorComputer(Node):
                 phi_r = np.arctan(self.d / (R - self.l / 2))
                 w_rear = v / self.r
 
-                self.v_last = v
-                self.R_last = R
+                self.v_rec = v
+                self.R_rec = R
 
                 # 输出参数
                 if 'param' in self.io.keys():
                     self.io['param'].write([phi_l, phi_r, w_rear])
-                
-                # 调试话题
-                if self.debug_topic:
-                    self.ros.publish_topic('/actuator/v', Float64(v))
-                    if w is not None:
-                        self.ros.publish_topic('/actuator/w', Float64(w))
-                    if phi is not None:
-                        self.ros.publish_topic('/actuator/phi', Float64(R))
 
 
 """

@@ -18,8 +18,7 @@ if __name__ == '__main__':
         1.628,
         2.995,
         0.38,
-        0.78,
-        True
+        0.78
     )
     actuator_caller = WebotsROSAckermannActuatorCaller('actuator_caller',
         '/car/left_front_steer_motor',
@@ -43,7 +42,7 @@ if __name__ == '__main__':
         cable_type = 'pipe',
         latest = True,
         distributees = [
-            (actuator_caller, 'odom')
+            (actuator_computer, 'odom')
         ]
     )
 
