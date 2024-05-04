@@ -60,7 +60,8 @@ class WebotsRotationalMotorController:
         之前里程计由速度指令开环估计, 而不是由传感器得到 (加速度约 3 ~ 4 m/s^2, 速度突变会导致较大误差);
         考虑到 controller 可能需要闭环里程计的信息以估计自身实际速度而非指令速度, 因此改为由轮速计加上转向指令得到里程计.
         record 过程使用了该里程计应该也是起步时有过快回缩情况的原因 (car_1 ~ 4).
-            Update: 新录制的数据 (car_5) 仍然有起步问题, 原因待查. TODO
+            Update: 新录制的数据 (car_5) 仍然有起步问题, 原因待查.
+            Update: get_velocity 服务不是测量来的, 即现在的 odom 仍然是开环, 还是应该使用 position_sensor. TODO
 """
 class WebotsROSAckermannActuatorComputer(Node):
     def __init__(self, name,
@@ -69,14 +70,11 @@ class WebotsROSAckermannActuatorComputer(Node):
         wheelbase,
         wheel_radius,
         max_steering_angle,
-        left_rear_motor_velocity_srv = '/car/left_rear_motor/get_velocity', # TODO
-        right_rear_motor_velocity_srv = '/car/right_rear_motor/get_velocity'
+        #  = '', # TODO
     ):
         super().__init__(name)
 
         self.get_time_srv = get_time_srv
-        self.left_rear_motor_velocity_srv = left_rear_motor_velocity_srv
-        self.right_rear_motor_velocity_srv = right_rear_motor_velocity_srv
 
         self.l = track
         self.d = wheelbase
@@ -91,33 +89,10 @@ class WebotsROSAckermannActuatorComputer(Node):
 
         self.ros = ROSContext(self.name)
         self.ros.register_service(self.get_time_srv, get_float)
-        self.ros.register_service(left_rear_motor_velocity_srv, get_float)
-        self.ros.register_service(right_rear_motor_velocity_srv, get_float)
 
     def get_time(self):
         response = self.ros.call_service(self.get_time_srv, get_floatRequest(0))
         return response.value if response is not None else None
-    
-    def get_rear_velocity(self):
-        response = self.ros.call_service(self.left_rear_motor_velocity_srv, get_floatRequest(0))
-        if response is None:
-            return 0
-        w_l = response.value
-
-        # TODO: 初始时会一直是 135.0, 临时解决方案: 6 位小数为 0 则舍弃.
-        if int(abs(w_l - int(w_l)) * 1000000) == 0:
-            return 0
-
-        response = self.ros.call_service(self.right_rear_motor_velocity_srv, get_floatRequest(0))
-        if response is None:
-            return 0
-        w_r = response.value
-
-        # TODO
-        if int(abs(w_l - int(w_l)) * 1000000) == 0:
-            return 0
-        
-        return self.r * (w_l + w_r) / 2
     
     def update_odom(self, v, R, dt):
         dist = v * dt

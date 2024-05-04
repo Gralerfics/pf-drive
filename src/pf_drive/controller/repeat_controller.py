@@ -160,7 +160,7 @@ class BaselineRepeatController(Node):
                             k_r = k
                         img_ref = self.q[q_idx][0]
                         scan_offsets[k], scan_values[k] = NCC_horizontal_match(image, img_ref)
-                    scan_values[scan_values < min(0.1, scan_values.min() / 2)] = 0 # TODO, threshold 当前随意设置, 理应表示 NCC 底噪; 如果全都被滤除说明两图差距已经很大, 也许可以作为确认丢失的一种条件; 最小值除二仅为防止崩溃, 无实际意义.
+                    scan_values[scan_values < min(0.1, scan_values.min() * 0.8)] = 0 # TODO, threshold 当前随意设置, 理应表示 NCC 底噪; 如果全都被滤除说明两图差距已经很大, 也许可以作为确认丢失的一种条件; 最小值 * 0.8 仅为防止崩溃, 无实际意义.
                     delta_p = scan_values / scan_values.sum() @ scan_distances
                     delta_distance = self.k_along_path * dt * delta_p
                     along_path_correction = (l_odomR_odomB - delta_distance) / l_odomR_odomB # TODO: divide 0
