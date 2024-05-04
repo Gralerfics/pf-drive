@@ -5,6 +5,7 @@ import numpy as np
 
 import transforms3d as t3d
 
+from std_msgs.msg import Float64
 from webots_ros.srv import get_bool, get_boolRequest, get_boolResponse
 from webots_ros.srv import get_float, get_floatRequest, get_floatResponse
 from webots_ros.srv import set_float, set_floatRequest, set_floatResponse
@@ -64,7 +65,8 @@ class WebotsROSAckermannActuatorComputer(Node):
         track,
         wheelbase,
         wheel_radius,
-        max_steering_angle
+        max_steering_angle,
+        debug_topic = False
     ):
         super().__init__(name)
 
@@ -76,6 +78,8 @@ class WebotsROSAckermannActuatorComputer(Node):
         self.max_phi = max_steering_angle
 
         self.R_min_abs = self.d / np.tan(self.max_phi) + self.l / 2
+
+        self.debug_topic = debug_topic
 
         self.odom = np.eye(4)
         self.v_last = 0
@@ -134,6 +138,7 @@ class WebotsROSAckermannActuatorComputer(Node):
                     continue
                 
                 # 计算执行器指令
+                w, phi = None, None
                 if command[0] == 'vw':
                     v, w = command[1], command[2]
                     sgn = np.sign(v + 1e-3) * np.sign(w + 1e-3)
@@ -158,6 +163,14 @@ class WebotsROSAckermannActuatorComputer(Node):
                 # 输出参数
                 if 'param' in self.io.keys():
                     self.io['param'].write([phi_l, phi_r, w_rear])
+                
+                # 调试话题
+                if self.debug_topic:
+                    self.ros.publish_topic('/actuator/v', Float64(v))
+                    if w is not None:
+                        self.ros.publish_topic('/actuator/w', Float64(w))
+                    if phi is not None:
+                        self.ros.publish_topic('/actuator/phi', Float64(R))
 
 
 """

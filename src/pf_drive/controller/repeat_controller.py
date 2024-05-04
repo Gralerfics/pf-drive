@@ -38,8 +38,8 @@ class BaselineRepeatController(Node):
         self.k_rotation = kwargs['k_rotation']
         self.k_along_path = kwargs['k_along_path']
         self.distance_threshold = kwargs['distance_threshold']
-        self.angle_threshold = kwargs['angle_threshold']
         self.R_min_abs = kwargs['R_min_abs']
+        self.reference_v = kwargs['reference_v']
 
         self.max_rp = max(self.along_path_radius, self.predict_number)
 
@@ -150,7 +150,7 @@ class BaselineRepeatController(Node):
                     dt = current_time - timer_P
                     timer_P = current_time
 
-                    # along-path correction
+                    # along-path correction, TODO: 起步时有过快回缩的情况
                     scan_q_indices = [q_idx for q_idx in range(2 * r + 1) if self.q[q_idx] is not None]
                     scan_q_indices = [scan_q_indices[0]] * (scan_q_indices[0]) + scan_q_indices
                     scan_q_indices = scan_q_indices + [scan_q_indices[-1]] * (2 * r - scan_q_indices[-1])
@@ -195,7 +195,7 @@ class BaselineRepeatController(Node):
                 # TODO: actuator_command
                 v = 9.0
 
-                T_0_qN = [T for T in self.q.q[r:(r + 3)] if T is not None][-1][1]
+                T_0_qN = [item for item in self.q.q[r:(r + 3)] if item is not None][-1][1]
                 T_0_qB = self.q[r + 1][1]
                 T_0_odomN = self.T_0_odomB @ t3d_ext.einv(T_0_qB) @ T_0_qN
                 T_odomR_odomN = t3d_ext.einv(T_0_odomR) @ T_0_odomN
@@ -212,6 +212,9 @@ class BaselineRepeatController(Node):
                     if abs(R) < self.R_min_abs:
                         R = np.sign(R) * self.R_min_abs
                     w = v / R
+
+                # T_valid = [item[1] for item in self.q.q[(r + 1):] if item is not None]
+                # pass
 
                 self.io['actuator_command'].write(('vw', v, w))
                 operation_num += 1

@@ -19,6 +19,5 @@
     "predict_number": 5,
     "k_rotation": 0.02,
     "k_along_path": 0.2,
-    "distance_threshold": 0.2,
-    "angle_threshold": 0.1
+    "distance_threshold": 0.2
 }

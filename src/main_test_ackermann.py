@@ -18,7 +18,8 @@ if __name__ == '__main__':
         1.628,
         2.995,
         0.38,
-        0.78
+        0.78,
+        True
     )
     actuator_caller = WebotsROSAckermannActuatorCaller('actuator_caller',
         '/car/left_front_steer_motor',

@@ -126,7 +126,7 @@ actuator_caller.start()
     Main
 """
 # ROS
-ros = ROSContext('webots_ros_ackermann_recorder')
+ros = ROSContext('webots_ros_ackermann_record')
 ros.init_node(anonymous = False)
 odom_topic = fetch(config, ['world', 'odometry', 'odom_output_topic'], '/car/odom')
 
@@ -193,11 +193,4 @@ while not ros.is_shutdown():
             ros.loginfo('Goal %d saved.' % idx)
             last_odom = odom
             idx += 1
-
-
-# camera.join()
-# locator.join()
-# controller.join()
-# actuator_computer.join()
-# actuator_caller.join()
 
