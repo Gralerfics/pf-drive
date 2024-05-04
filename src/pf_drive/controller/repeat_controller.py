@@ -149,7 +149,7 @@ class BaselineRepeatController(Node):
                     dt = current_time - timer_P
                     timer_P = current_time
 
-                    # along-path correction, TODO: 起步时有过快回缩的情况
+                    # along-path correction
                     scan_q_indices = [q_idx for q_idx in range(2 * r + 1) if self.q[q_idx] is not None]
                     scan_q_indices = [scan_q_indices[0]] * (scan_q_indices[0]) + scan_q_indices
                     scan_q_indices = scan_q_indices + [scan_q_indices[-1]] * (2 * r - scan_q_indices[-1])
