@@ -224,7 +224,7 @@ try:
             cable_main_ctrl_odom.write(odom) # odom: main -> controller
             gt_pose = cable_locator_main_gt.read() # gt_pose: locator -> main
 
-            # 保存 repeat 过程的 gt_pose
+            # goal passed
             if cable_ctrl_main_passed_goal.poll():
                 idx = cable_ctrl_main_passed_goal.read() # passed_goal: main -> controller
                 if idx is None:
@@ -246,6 +246,12 @@ try:
                         }, f)
                     break
                 else:
+                    # 调试话题
+                    ros.publish_topic('/a_gt', t3d_ext.e2PS(record_gt_poses[idx], frame_id = 'map'))
+                    if idx + 1 < len(record_gt_poses):
+                        ros.publish_topic('/b_gt', t3d_ext.e2PS(record_gt_poses[idx + 1], frame_id = 'map'))
+
+                    # 保存 repeat 过程的 gt_pose
                     report_gt_poses.append(gt_pose)
 
             # 发布 odom 与坐标变换
