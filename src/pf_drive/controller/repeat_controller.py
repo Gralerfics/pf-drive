@@ -41,9 +41,8 @@ class BaselineRepeatController(Node):
         self.R_min_abs = kwargs['R_min_abs']
         self.reference_velocity = kwargs['reference_velocity']
 
-        self.max_rp = max(self.along_path_radius, self.predict_number)
-
         # 滑动窗口队列
+        self.max_rp = max(self.along_path_radius, self.predict_number)
         self.q_r = self.along_path_radius # r (fixed, 相对滑动窗口队列)
         self.q_size = self.along_path_radius + 1 + self.max_rp
         """
@@ -98,7 +97,7 @@ class BaselineRepeatController(Node):
 
         # 简写
         r = self.along_path_radius
-        p = self.predict_number
+        p = self.max_rp
 
         # 凑满 q_size 个数据, 初始皆为 None, 从 passed_idx 为 -self.max_rp - 1 开始逐个入队直到 0
         self.q.q = [None] * self.q_size
@@ -189,30 +188,52 @@ class BaselineRepeatController(Node):
                 ros.publish_topic('/b', t3d_ext.e2PS(self.T_0_odomB, frame_id = 'odom'))
                 ros.publish_topic('/r', t3d_ext.e2PS(T_0_odomR, frame_id = 'odom'))
                 
-                # TODO: 执行器
+                # 执行器 [Approach 1: r + 2 预测]
+                # v = self.reference_velocity
+
+                # T_0_qN = [item for item in self.q.q[r:(r + 3)] if item is not None][-1][1]
+                # T_0_qB = self.q[r + 1][1]
+                # T_0_odomN = self.T_0_odomB @ t3d_ext.einv(T_0_qB) @ T_0_qN
+                # T_odomR_odomN = t3d_ext.einv(T_0_odomR) @ T_0_odomN
+
+                # dy = T_odomR_odomN[1, 3]
+                # dx = T_odomR_odomN[0, 3]
+                # ros.publish_topic('/goal', t3d_ext.e2PS(T_0_odomN, frame_id = 'odom'))
+
+                # if abs(dy) < 1e-2:
+                #     w = 0.0
+                # else:
+                #     d_square = dx ** 2 + dy ** 2
+                #     R = d_square / 2 / dy
+                #     if abs(R) < self.R_min_abs:
+                #         R = np.sign(R) * self.R_min_abs
+                #     w = v / R
+
+                # self.io['actuator_command'].write(('vw', v, w))
+                # operation_num += 1
+
+                # 执行器 [Approach 2: 加权预测]
+                # weights = np.array([0.0, 1.0] + [0.0] * (p - 2)) # r + 1 (Qb) ~ (Qi) ~ r + p (Qp)
+                weights = np.array([0.0, 1.0, 0.6, 0.2, 0.1, 0.05, 0.03, 0.02, 0.01])
                 v = self.reference_velocity
 
-                T_0_qN = [item for item in self.q.q[r:(r + 3)] if item is not None][-1][1]
-                T_0_qB = self.q[r + 1][1]
-                T_0_odomN = self.T_0_odomB @ t3d_ext.einv(T_0_qB) @ T_0_qN
-                T_odomR_odomN = t3d_ext.einv(T_0_odomR) @ T_0_odomN
+                T_q_indices = np.array([q_idx for q_idx in range(r + 1, r + p + 1) if self.q[q_idx] is not None])
+                T_0_Qi = np.array([self.q[q_idx][1] for q_idx in T_q_indices])
+                T_odomR_odomQi = (t3d_ext.einv(T_0_odomR) @ self.T_0_odomB @ t3d_ext.einv(T_0_Qi[0])) @ T_0_Qi
+                
+                xy = np.array([item[:2, 3] for item in T_odomR_odomQi])
 
-                dy = T_odomR_odomN[1, 3]
-                dx = T_odomR_odomN[0, 3]
-                ros.publish_topic('/goal', t3d_ext.e2PS(T_0_odomN, frame_id = 'odom'))
-
-                if abs(dy) < 1e-2:
-                    w = 0.0
-                else:
-                    d_square = dx ** 2 + dy ** 2
-                    R = d_square / 2 / dy
-                    if abs(R) < self.R_min_abs:
-                        R = np.sign(R) * self.R_min_abs
+                d_square = np.sum(xy * xy, axis = 1)
+                with np.errstate(divide = 'ignore', invalid = 'ignore'):
+                    R = d_square / 2 / xy[:, 1]
+                    flag = abs(R) < self.R_min_abs
+                    R[flag] = np.sign(R[flag]) * self.R_min_abs
                     w = v / R
+                    w[np.isnan(w)] = 0.0
 
-                # T_valid = [item[1] for item in self.q.q[(r + 1):] if item is not None]
-                # pass
+                weights_q = weights[T_q_indices - (r + 1)]
+                w_hat = weights_q @ w / np.sum(weights_q)
 
-                self.io['actuator_command'].write(('vw', v, w))
+                self.io['actuator_command'].write(('vw', v, w_hat))
                 operation_num += 1
 
