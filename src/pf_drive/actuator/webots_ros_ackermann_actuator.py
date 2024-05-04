@@ -56,13 +56,6 @@ class WebotsRotationalMotorController:
     `param`, output (any)
         format:
             [phi_l, phi_r, w_rear]
-    Notes:
-        之前里程计由速度指令开环估计, 而不是由传感器得到 (加速度约 3 ~ 4 m/s^2, 速度突变会导致较大误差);
-        考虑到 controller 可能需要闭环里程计的信息以估计自身实际速度而非指令速度, 因此改为由轮速计加上转向指令得到里程计.
-        record 过程使用了该里程计应该也是起步时有过快回缩情况的原因 (car_1 ~ 4).
-            Update: 新录制的数据 (car_5) 仍然有起步问题, 原因待查.
-            Update: get_velocity 服务不是测量来的, 即现在的 odom 仍然是开环, 还是应该使用 position_sensor.
-            Update: 已修正.
 """
 class WebotsROSAckermannActuatorComputer(Node):
     def __init__(self, name,
@@ -121,8 +114,6 @@ class WebotsROSAckermannActuatorComputer(Node):
         d_r = (self.angle_r - self.angle_r_last) * self.r
         return (d_l + d_r) / 2
 
-    # def update_odom(self, v, R, dt):
-    #     dist = v * dt
     def update_odom(self, d, R):
         dist = d
         odom_R = t3d_ext.edR(self.odom)
@@ -160,7 +151,6 @@ class WebotsROSAckermannActuatorComputer(Node):
             last_time = current_time
 
             if 'odom' in self.io.keys():
-                # self.update_odom(self.v_rec, self.R_rec, dt) # 指令开环
                 self.update_odom(self.get_d(), self.R_rec) # 轮速 + 转向指令
                 self.io['odom'].write(self.odom)
             
