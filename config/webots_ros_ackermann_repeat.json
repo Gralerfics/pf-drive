@@ -18,7 +18,7 @@
     "along_path_radius": 2,
     "predict_number": 5,
     "k_rotation": 0.02,
-    "k_along_path": 0.24,
+    "k_along_path": 0.15,
     "distance_threshold": 0.2,
     "reference_velocity": 9.0
 }

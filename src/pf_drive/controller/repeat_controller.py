@@ -212,7 +212,7 @@ class BaselineRepeatController(Node):
                 # self.io['actuator_command'].write(('vw', v, w))
                 # operation_num += 1
 
-                # 执行器 [Approach 2: 加权预测]
+                # 执行器 [Approach 2: 加权预测], TODO: velocity control & weights
                 # weights = np.array([0.0, 1.0] + [0.0] * (p - 2)) # r + 1 (Qb) ~ (Qi) ~ r + p (Qp)
                 weights = np.array([0.0, 1.0, 0.6, 0.2, 0.1, 0.05, 0.03, 0.02, 0.01])
                 v = self.reference_velocity
@@ -231,8 +231,11 @@ class BaselineRepeatController(Node):
                     w = v / R
                     w[np.isnan(w)] = 0.0
 
-                weights_q = weights[T_q_indices - (r + 1)]
-                w_hat = weights_q @ w / np.sum(weights_q)
+                    weights_q = weights[T_q_indices - (r + 1)]
+                    w_hat = weights_q @ w / np.sum(weights_q)
+
+                    if np.isnan(w_hat):
+                        w_hat = 0.0
 
                 self.io['actuator_command'].write(('vw', v, w_hat))
                 operation_num += 1
