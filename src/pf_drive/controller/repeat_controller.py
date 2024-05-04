@@ -149,7 +149,7 @@ class BaselineRepeatController(Node):
                     dt = current_time - timer_P
                     timer_P = current_time
 
-                    # along-path correction
+                    # along-path correction # TODO: * 估计有些超前
                     scan_q_indices = [q_idx for q_idx in range(2 * r + 1) if self.q[q_idx] is not None]
                     scan_q_indices = [scan_q_indices[0]] * (scan_q_indices[0]) + scan_q_indices
                     scan_q_indices = scan_q_indices + [scan_q_indices[-1]] * (2 * r - scan_q_indices[-1])
@@ -180,7 +180,7 @@ class BaselineRepeatController(Node):
                     correction_offset[:3, 3] *= along_path_correction
                     self.T_0_odomB = T_0_odomR @ correction_offset
                 
-                # TODO: delta distance 判断 (required?)
+                # TODO: delta distance 判断 (似乎不需要)
                 # T_odomR_odomB = t3d_ext.einv(T_0_odomR) @ self.T_0_odomB # 经过校正, 与 pass_to_next_goal 中的 T_odomA_odomB 不同
                 
                 # 发布调试话题

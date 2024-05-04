@@ -7,9 +7,6 @@ from multiprocessing import Process, Pipe, Queue, Array, Event
 class MultinodesException(Exception): pass
 
 
-# TODO: RPC Cable
-
-
 """
     pipe 和 queue 接收一次后皆会弹出该数据，无法做到广播，故建议只连接两个节点 (例外情况例如多个接收节点功能是平行的);
     shared_object 适用于广播，需要指定内存大小，且锁可能降低性能;

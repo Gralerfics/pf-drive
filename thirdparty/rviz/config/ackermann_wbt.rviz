@@ -6,6 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /TF1/Frames1
+        - /Odometry1/Status1
         - /Odometry1/Shape1
       Splitter Ratio: 0.5714285969734192
     Tree Height: 715
@@ -142,9 +143,8 @@ Visualization Manager:
           appearance_9:
             {}
         map:
-          {}
-        odom:
-          {}
+          odom:
+            {}
         right_front_wheel:
           appearance_7:
             {}

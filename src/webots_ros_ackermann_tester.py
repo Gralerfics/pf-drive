@@ -23,7 +23,7 @@ from pf_drive.device import WebotsROSRobotGlobalLocator
 """
 locator = WebotsROSRobotGlobalLocator('locator', 'car', '/car/supervisor')
 # controller = KeyboardAckermannController('controller')
-actuator_computer = WebotsROSAckermannActuatorComputer('actuator_computer', '/car/robot/get_time', 1.628, 2.995, 0.38, 0.6)
+actuator_computer = WebotsROSAckermannActuatorComputer('actuator_computer', '/car/robot/get_time', 1.628, 2.995, 0.38, 0.6, '/car/left_rear_position_sensor/value', '/car/right_rear_position_sensor/value')
 actuator_caller = WebotsROSAckermannActuatorCaller('actuator_caller', '/car/left_front_steer_motor', '/car/right_front_steer_motor', '/car/left_rear_motor', '/car/right_rear_motor')
 
 cable_locator_main_gt_pose = Cable(cable_type = 'pipe', latest = True, distributees = [(locator, 'gt_pose')])

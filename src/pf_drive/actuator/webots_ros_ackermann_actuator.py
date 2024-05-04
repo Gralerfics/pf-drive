@@ -6,6 +6,7 @@ import numpy as np
 import transforms3d as t3d
 
 from std_msgs.msg import Float64
+from webots_ros.msg import Float64Stamped
 from webots_ros.srv import get_bool, get_boolRequest, get_boolResponse
 from webots_ros.srv import get_float, get_floatRequest, get_floatResponse
 from webots_ros.srv import set_float, set_floatRequest, set_floatResponse
@@ -20,7 +21,6 @@ class WebotsRotationalMotorController:
     INFINITY = float('inf')
 
     def __init__(self, motor_srv, ros_context):
-        # TODO: service reset when resetting simulation. 不过看起来服务句柄不会丢失.
         self.set_position_srv = motor_srv + '/set_position'
         self.set_velocity_srv = motor_srv + '/set_velocity'
         self.set_torque_srv = motor_srv + '/set_torque'
@@ -52,7 +52,7 @@ class WebotsRotationalMotorController:
             (type = 'vphi', v, phi)
     `odom`, output (any)
         format:
-            4x4 np.array, TODO: 是否 .tolist() 减少少量长度? 需与转换耗时比较.
+            4x4 np.array
     `param`, output (any)
         format:
             [phi_l, phi_r, w_rear]
@@ -61,7 +61,8 @@ class WebotsRotationalMotorController:
         考虑到 controller 可能需要闭环里程计的信息以估计自身实际速度而非指令速度, 因此改为由轮速计加上转向指令得到里程计.
         record 过程使用了该里程计应该也是起步时有过快回缩情况的原因 (car_1 ~ 4).
             Update: 新录制的数据 (car_5) 仍然有起步问题, 原因待查.
-            Update: get_velocity 服务不是测量来的, 即现在的 odom 仍然是开环, 还是应该使用 position_sensor. TODO
+            Update: get_velocity 服务不是测量来的, 即现在的 odom 仍然是开环, 还是应该使用 position_sensor.
+            Update: 已修正.
 """
 class WebotsROSAckermannActuatorComputer(Node):
     def __init__(self, name,
@@ -70,7 +71,8 @@ class WebotsROSAckermannActuatorComputer(Node):
         wheelbase,
         wheel_radius,
         max_steering_angle,
-        #  = '', # TODO
+        left_rear_position_topic,
+        right_rear_position_topic
     ):
         super().__init__(name)
 
@@ -81,6 +83,9 @@ class WebotsROSAckermannActuatorComputer(Node):
         self.r = wheel_radius
         self.max_phi = max_steering_angle
 
+        self.left_rear_position_topic = left_rear_position_topic
+        self.right_rear_position_topic = right_rear_position_topic
+
         self.R_min_abs = self.d / np.tan(self.max_phi) + self.l / 2
 
         self.odom = np.eye(4)
@@ -90,12 +95,36 @@ class WebotsROSAckermannActuatorComputer(Node):
         self.ros = ROSContext(self.name)
         self.ros.register_service(self.get_time_srv, get_float)
 
+        self.angle_l_last, self.angle_l = None, None
+        self.angle_r_last, self.angle_r = None, None
+
     def get_time(self):
         response = self.ros.call_service(self.get_time_srv, get_floatRequest(0))
         return response.value if response is not None else None
+
+    def left_rear_position_callback(self, msg):
+        self.angle_l_last = self.angle_l
+        self.angle_l = msg.data
+        if self.angle_l_last is None:
+            self.angle_l_last = msg.data
     
-    def update_odom(self, v, R, dt):
-        dist = v * dt
+    def right_rear_position_callback(self, msg):
+        self.angle_r_last = self.angle_r
+        self.angle_r = msg.data
+        if self.angle_r_last is None:
+            self.angle_r_last = msg.data
+    
+    def get_d(self):
+        if self.angle_l is None or self.angle_l_last is None or self.angle_r is None or self.angle_r_last is None:
+            return 0
+        d_l = (self.angle_l - self.angle_l_last) * self.r
+        d_r = (self.angle_r - self.angle_r_last) * self.r
+        return (d_l + d_r) / 2
+
+    # def update_odom(self, v, R, dt):
+    #     dist = v * dt
+    def update_odom(self, d, R):
+        dist = d
         odom_R = t3d_ext.edR(self.odom)
 
         if R > 1e9: # inf
@@ -113,10 +142,15 @@ class WebotsROSAckermannActuatorComputer(Node):
     
     def run(self):
         self.ros.init_node(anonymous = False) # 不可在 __init__ 中调用，否则会导致和 main 中的 init_node 冲突
+        self.ros.subscribe_topic(self.left_rear_position_topic, Float64Stamped, self.left_rear_position_callback)
+        self.ros.subscribe_topic(self.right_rear_position_topic, Float64Stamped, self.right_rear_position_callback)
         
         current_time = self.get_time()
         last_time = current_time
         while not self.ros.is_shutdown():
+            # 处理 ROS 消息回调
+            self.ros.spin_once(0.01) # TODO: 不加也能正常订阅, why, 因为有其他进程在 spin?
+
             # 里程计 (不受 command 影响, 有无 command 都会计算里程计)
             current_time = self.get_time()
             if current_time is None or last_time is None:
@@ -127,7 +161,7 @@ class WebotsROSAckermannActuatorComputer(Node):
 
             if 'odom' in self.io.keys():
                 # self.update_odom(self.v_rec, self.R_rec, dt) # 指令开环
-                self.update_odom(self.get_rear_velocity(), self.R_rec, dt) # 轮速 + 转向指令
+                self.update_odom(self.get_d(), self.R_rec) # 轮速 + 转向指令
                 self.io['odom'].write(self.odom)
             
             # 检查接口

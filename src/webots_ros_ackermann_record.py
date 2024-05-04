@@ -64,7 +64,9 @@ actuator_computer = WebotsROSAckermannActuatorComputer('actuator_computer',
     fetch(config, ['world', 'car', 'track'], 1.628),
     fetch(config, ['world', 'car', 'wheelbase'], 2.995),
     fetch(config, ['world', 'car', 'wheel_radius'], 0.38),
-    fetch(config, ['world', 'car', 'max_steering_angle'], 0.6)
+    fetch(config, ['world', 'car', 'max_steering_angle'], 0.6),
+    '/car/left_rear_position_sensor/value',
+    '/car/right_rear_position_sensor/value'
 )
 actuator_caller = WebotsROSAckermannActuatorCaller('actuator_caller',
     fetch(config, ['world', 'car', 'left_front_steer_motor'], '/car/left_front_steer_motor'),

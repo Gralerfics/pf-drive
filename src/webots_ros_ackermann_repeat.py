@@ -106,7 +106,9 @@ actuator_computer = WebotsROSAckermannActuatorComputer('actuator_computer',
     fetch(config, ['world', 'car', 'track'], 1.628),
     fetch(config, ['world', 'car', 'wheelbase'], 2.995),
     fetch(config, ['world', 'car', 'wheel_radius'], 0.38),
-    fetch(config, ['world', 'car', 'max_steering_angle'], 0.6)
+    fetch(config, ['world', 'car', 'max_steering_angle'], 0.6),
+    '/car/left_rear_position_sensor/value',
+    '/car/right_rear_position_sensor/value'
 )
 actuator_caller = WebotsROSAckermannActuatorCaller('actuator_caller',
     fetch(config, ['world', 'car', 'left_front_steer_motor'], '/car/left_front_steer_motor'),
@@ -217,51 +219,47 @@ record_gt_pose_path = t3d_ext.es2P(record_gt_poses, frame_id = 'map')
 report_gt_poses = []
 odom, last_odom = None, None
 idx = 0
-try:
-    while not ros.is_shutdown():
-        if cable_actuator_main_odom.poll() and cable_locator_main_gt.poll():
-            odom = cable_actuator_main_odom.read() # odom: actuator_computer -> main
-            cable_main_ctrl_odom.write(odom) # odom: main -> controller
-            gt_pose = cable_locator_main_gt.read() # gt_pose: locator -> main
+while not ros.is_shutdown():
+    if cable_actuator_main_odom.poll() and cable_locator_main_gt.poll():
+        odom = cable_actuator_main_odom.read() # odom: actuator_computer -> main
+        cable_main_ctrl_odom.write(odom) # odom: main -> controller
+        gt_pose = cable_locator_main_gt.read() # gt_pose: locator -> main
 
-            # goal passed
-            if cable_ctrl_main_passed_goal.poll():
-                idx = cable_ctrl_main_passed_goal.read() # passed_goal: main -> controller
-                if idx is None:
-                    # 保存 report, TODO: other file formats and statistics
-                    os.makedirs(report_path, exist_ok = True)
-                    with open(os.path.join(report_path, 'record_traj.txt'), 'w') as f:
-                        for gt_pose in record_gt_poses:
-                            f.write(t3d_ext.e2kitti(gt_pose) + '\n')
-                    with open(os.path.join(report_path, 'repeat_traj.txt'), 'w') as f:
-                        for gt_pose in report_gt_poses:
-                            f.write(t3d_ext.e2kitti(gt_pose) + '\n')
-                    with open(os.path.join(report_path, 'parameters.json'), 'w') as f:
-                        json.dump({
-                            'along_path_radius': along_path_radius,
-                            'predict_number': predict_number,
-                            'k_rotation': k_rotation,
-                            'k_along_path': k_along_path,
-                            'distance_threshold': distance_threshold,
-                        }, f)
-                    break
-                else:
-                    # 调试话题
-                    ros.publish_topic('/a_gt', t3d_ext.e2PS(record_gt_poses[idx], frame_id = 'map'))
-                    if idx + 1 < len(record_gt_poses):
-                        ros.publish_topic('/b_gt', t3d_ext.e2PS(record_gt_poses[idx + 1], frame_id = 'map'))
+        # goal passed
+        if cable_ctrl_main_passed_goal.poll():
+            idx = cable_ctrl_main_passed_goal.read() # passed_goal: main -> controller
+            if idx is None:
+                # 保存 report
+                os.makedirs(report_path, exist_ok = True)
+                with open(os.path.join(report_path, 'record_traj.txt'), 'w') as f:
+                    for gt_pose in record_gt_poses:
+                        f.write(t3d_ext.e2kitti(gt_pose) + '\n')
+                with open(os.path.join(report_path, 'repeat_traj.txt'), 'w') as f:
+                    for gt_pose in report_gt_poses:
+                        f.write(t3d_ext.e2kitti(gt_pose) + '\n')
+                with open(os.path.join(report_path, 'parameters.json'), 'w') as f:
+                    json.dump({
+                        'along_path_radius': along_path_radius,
+                        'predict_number': predict_number,
+                        'k_rotation': k_rotation,
+                        'k_along_path': k_along_path,
+                        'distance_threshold': distance_threshold,
+                    }, f)
+                break
+            else:
+                # 调试话题
+                ros.publish_topic('/a_gt', t3d_ext.e2PS(record_gt_poses[idx], frame_id = 'map'))
+                if idx + 1 < len(record_gt_poses):
+                    ros.publish_topic('/b_gt', t3d_ext.e2PS(record_gt_poses[idx + 1], frame_id = 'map'))
 
-                    # 保存 repeat 过程的 gt_pose
-                    report_gt_poses.append(gt_pose)
+                # 保存 repeat 过程的 gt_pose
+                report_gt_poses.append(gt_pose)
 
-            # 发布 odom 与坐标变换
-            ros.publish_topic(odom_topic, t3d_ext.e2O(odom, frame_id = 'odom', stamp = ros.time())) # only for rviz
-            T_map_odom = np.dot(gt_pose, t3d_ext.einv(odom))
-            ros.publish_tf(T_map_odom, 'map', 'odom')
-            
-            ros.publish_topic('/recorded_odoms', record_odom_path)
-            ros.publish_topic('/recorded_gts', record_gt_pose_path)
-finally:
-    # TODO: 貌似没用
-    pass
+        # 发布 odom 与坐标变换
+        ros.publish_topic(odom_topic, t3d_ext.e2O(odom, frame_id = 'odom', stamp = ros.time())) # only for rviz
+        T_map_odom = np.dot(gt_pose, t3d_ext.einv(odom))
+        ros.publish_tf(T_map_odom, 'map', 'odom')
+        
+        ros.publish_topic('/recorded_odoms', record_odom_path)
+        ros.publish_topic('/recorded_gts', record_gt_pose_path)
 
