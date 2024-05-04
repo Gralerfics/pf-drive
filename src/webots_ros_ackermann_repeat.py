@@ -73,6 +73,7 @@ predict_number = fetch(config, ['predict_number'], 5)
 k_rotation = fetch(config, ['k_rotation'], 0.06)
 k_along_path = fetch(config, ['k_along_path'], 0.1)
 distance_threshold = fetch(config, ['distance_threshold'], 0.2)
+reference_velocity = fetch(config, ['reference_velocity'], 10.0)
 
 
 """
@@ -98,7 +99,7 @@ controller = BaselineRepeatController('controller',
     k_along_path = k_along_path,
     distance_threshold = distance_threshold,
     R_min_abs = R_min_abs,
-    reference_v = 10.0
+    reference_velocity = reference_velocity,
 )
 actuator_computer = WebotsROSAckermannActuatorComputer('actuator_computer',
     fetch(config, ['world', 'get_time_srv'], '/car/robot/get_time'),

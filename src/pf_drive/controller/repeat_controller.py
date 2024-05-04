@@ -39,7 +39,7 @@ class BaselineRepeatController(Node):
         self.k_along_path = kwargs['k_along_path']
         self.distance_threshold = kwargs['distance_threshold']
         self.R_min_abs = kwargs['R_min_abs']
-        self.reference_v = kwargs['reference_v']
+        self.reference_velocity = kwargs['reference_velocity']
 
         self.max_rp = max(self.along_path_radius, self.predict_number)
 
@@ -181,9 +181,6 @@ class BaselineRepeatController(Node):
                     correction_offset[:3, 3] *= along_path_correction
                     self.T_0_odomB = T_0_odomR @ correction_offset
                 
-                # TODO: 记录 report 数据
-                pass
-                
                 # TODO: delta distance 判断 (required?)
                 # T_odomR_odomB = t3d_ext.einv(T_0_odomR) @ self.T_0_odomB # 经过校正, 与 pass_to_next_goal 中的 T_odomA_odomB 不同
                 
@@ -192,8 +189,8 @@ class BaselineRepeatController(Node):
                 ros.publish_topic('/b', t3d_ext.e2PS(self.T_0_odomB, frame_id = 'odom'))
                 ros.publish_topic('/r', t3d_ext.e2PS(T_0_odomR, frame_id = 'odom'))
                 
-                # TODO: actuator_command
-                v = 9.0
+                # TODO: 执行器
+                v = self.reference_velocity
 
                 T_0_qN = [item for item in self.q.q[r:(r + 3)] if item is not None][-1][1]
                 T_0_qB = self.q[r + 1][1]
