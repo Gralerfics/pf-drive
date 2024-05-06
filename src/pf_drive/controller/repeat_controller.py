@@ -177,12 +177,12 @@ class BaselineRepeatController(Node):
                     delta_p_distance = scan_values / scan_values.sum() @ scan_distances
                     along_path_correction = (l_odomR_odomB - self.k_along_path * dt * delta_p_distance) / l_odomR_odomB # TODO: divide 0
 
-                    print('scan_q_indices', scan_q_indices)
-                    print('scan_distances', scan_distances)
-                    print('scan_values', scan_values)
-                    print('delta_p_distance', delta_p_distance)
-                    print('along_path_correction', along_path_correction)
-                    print('\n')
+                    # print('scan_q_indices', scan_q_indices)
+                    # print('scan_distances', scan_distances)
+                    # print('scan_values', scan_values)
+                    # print('delta_p_distance', delta_p_distance)
+                    # print('along_path_correction', along_path_correction)
+                    # print('\n')
                     ros.publish_topic('/debug_img', np_to_Image(debug_img)) # [debug]
 
                     if u > 1.0 - 1e-2 or l_odomR_odomB < self.distance_threshold:
@@ -233,9 +233,11 @@ class BaselineRepeatController(Node):
                 # operation_num += 1
 
                 # 执行器 [Approach 2: 加权预测], TODO: velocity control & weights
-                # weights = np.array([0.0, 1.0] + [0.0] * (p - 2)) # r + 1 (Qb) ~ (Qi) ~ r + p (Qp)
+
+                # weights = np.array([0.0, 1.0] + [0.0] * (p - 2)) # r + 1 (Qb) ~ (Qi) ~ r + p (Qp) # = Approach 1
                 weights = np.array([0.0, 1.0, 0.6, 0.2, 0.1, 0.05, 0.03, 0.02, 0.01])
-                v = self.reference_velocity
+                v_full = self.reference_velocity
+                v_bottom = v_full / 2 # [trial]
 
                 T_q_indices = np.array([q_idx for q_idx in range(r + 1, r + p + 1) if self.q[q_idx] is not None])
                 T_0_Qi = np.array([self.q[q_idx][1] for q_idx in T_q_indices])
@@ -248,7 +250,8 @@ class BaselineRepeatController(Node):
                     R = d_square / 2 / xy[:, 1]
                     flag = abs(R) < self.R_min_abs
                     R[flag] = np.sign(R[flag]) * self.R_min_abs
-                    w = v / R
+
+                    w = v_full / R
                     w[np.isnan(w)] = 0.0
 
                     weights_q = weights[T_q_indices - (r + 1)]
@@ -256,7 +259,18 @@ class BaselineRepeatController(Node):
 
                     if np.isnan(w_hat):
                         w_hat = 0.0
+                
+                if abs(w_hat) < 1e-2:
+                    v_hat = v_full
+                else:
+                    R_hat = v_full / w_hat
+                    offset = max(0, abs(R_hat) - self.R_min_abs)
+                    v_hat = (1 - np.exp(-offset)) * (v_full - v_bottom) + v_bottom
+                    w_hat = v_hat / R_hat
 
-                self.io['actuator_command'].write(('vw', v, w_hat))
+                # print(v_hat, w_hat)
+                # print('\n')
+
+                self.io['actuator_command'].write(('vw', v_hat, w_hat))
                 operation_num += 1
 
