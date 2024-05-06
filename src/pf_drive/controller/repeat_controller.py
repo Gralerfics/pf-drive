@@ -31,9 +31,16 @@ class BaselineRepeatController(Node):
         # 参数
         self.horizontal_fov = kwargs['horizontal_fov']
         self.along_path_radius = kwargs['along_path_radius'] # r
-        self.predict_number = kwargs['predict_number'] # p
+        self.predict_number = kwargs['predict_number'] # p, TODO: 注意弯道的相对位置并没有补偿误差, p 过大会导致转向轨迹太贴近 record 中有误差的值.
+
         self.k_rotation = kwargs['k_rotation']
         self.k_along_path = kwargs['k_along_path']
+
+        self.initial_compensation_rotation_update_rate = kwargs['initial_compensation_rotation_update_rate']
+        self.initial_compensation_translation_update_rate = kwargs['initial_compensation_translation_update_rate']
+        self.initial_compensation_rotation_threshold = kwargs['initial_compensation_rotation_threshold']
+        self.initial_compensation_translation_threshold = kwargs['initial_compensation_translation_threshold']
+
         self.distance_threshold = kwargs['distance_threshold']
         self.R_min_abs = kwargs['R_min_abs']
         self.reference_velocity = kwargs['reference_velocity']
@@ -57,13 +64,8 @@ class BaselineRepeatController(Node):
         self.T_0_odomA = None
         self.T_0_odomB = None
         self.record_T_odomA_odomB = None
-
-        self.initial_adjust_rotation_factor = 1.0
-        self.initial_adjust_translation_factor = 1.0
-        self.initial_adjust_rotation_update_rate = 0.0
-        self.initial_adjust_translation_update_rate = 0.2
-        self.initial_adjust_rotation_threshold = 0.15
-        self.initial_adjust_translation_threshold = 0.1
+        self.initial_compensation_rotation_factor = 1.0
+        self.initial_compensation_translation_factor = 1.0
     
     def pass_to_next_goal(self):
         # loader 读完后不断发送 None, 此处不断入队, 直到 q_passed_idx + 1 项也为 None 时即结束
@@ -82,13 +84,13 @@ class BaselineRepeatController(Node):
                 initial_translation = t3d_ext.norm(self.record_T_odomA_odomB[:3, 3])
                 
                 corrected_T_odomA_odomB = t3d_ext.einv(self.T_0_odomA) @ self.T_0_odomB
-                rotation_factor = t3d.euler.mat2euler(corrected_T_odomA_odomB[:3, :3])[2] / initial_rotation if abs(initial_rotation) > self.initial_adjust_rotation_threshold else self.initial_adjust_rotation_factor
-                translation_factor = t3d_ext.norm(corrected_T_odomA_odomB[:3, 3]) / initial_translation if initial_translation > self.initial_adjust_translation_threshold else self.initial_adjust_translation_factor
+                rotation_factor = t3d.euler.mat2euler(corrected_T_odomA_odomB[:3, :3])[2] / initial_rotation if abs(initial_rotation) > self.initial_compensation_rotation_threshold else self.initial_compensation_rotation_factor
+                translation_factor = t3d_ext.norm(corrected_T_odomA_odomB[:3, 3]) / initial_translation if initial_translation > self.initial_compensation_translation_threshold else self.initial_compensation_translation_factor
 
-                self.initial_adjust_rotation_factor = self.initial_adjust_rotation_update_rate * rotation_factor + (1 - self.initial_adjust_rotation_update_rate) * self.initial_adjust_rotation_factor
-                self.initial_adjust_translation_factor = self.initial_adjust_translation_update_rate * translation_factor + (1 - self.initial_adjust_translation_update_rate) * self.initial_adjust_translation_factor
+                self.initial_compensation_rotation_factor = self.initial_compensation_rotation_update_rate * rotation_factor + (1 - self.initial_compensation_rotation_update_rate) * self.initial_compensation_rotation_factor
+                self.initial_compensation_translation_factor = self.initial_compensation_translation_update_rate * translation_factor + (1 - self.initial_compensation_translation_update_rate) * self.initial_compensation_translation_factor
 
-            # 若 T_0_odomB 无值则赋当前 odom 值
+            # 若 T_0_odomB 无值则赋当前 odom 值; 更新 A 为 B
             if self.T_0_odomB is None:
                 self.T_0_odomB = self.io['odom'].read(block = True)
             self.T_0_odomA = self.T_0_odomB
@@ -98,12 +100,8 @@ class BaselineRepeatController(Node):
             
             # 根据先前的误差程度粗调 T_odomA_odomB 作为初始估计
             T_odomA_odomB = self.record_T_odomA_odomB.copy()
-
-            print('Rough adjust:', self.initial_adjust_rotation_factor, self.initial_adjust_translation_factor)
-            print('\n')
-            T_odomA_odomB[:3, :3] = t3d.euler.euler2mat(0, 0, t3d.euler.mat2euler(T_odomA_odomB[:3, :3])[2] * self.initial_adjust_rotation_factor)
-            T_odomA_odomB[:3, 3] *= self.initial_adjust_translation_factor
-
+            T_odomA_odomB[:3, :3] = t3d.euler.euler2mat(0, 0, t3d.euler.mat2euler(T_odomA_odomB[:3, :3])[2] * self.initial_compensation_rotation_factor)
+            T_odomA_odomB[:3, 3] *= self.initial_compensation_translation_factor
             self.T_0_odomB = self.T_0_odomA @ T_odomA_odomB
 
         # 最新入队两个元素有效则更新 goal_distances
@@ -144,8 +142,8 @@ class BaselineRepeatController(Node):
             # 结束
             if self.q[r] is not None and self.q[r + 1] is None:
                 print('Finished.')
-                self.io['actuator_command'].write(('vw', 0, 0)) # 停车
                 self.io['passed_goal'].write(None) # 结束信号
+                # self.io['actuator_command'].write(('vw', 0, 0)) # __main__ 进行停车
                 break
             
             # 运算
@@ -199,6 +197,8 @@ class BaselineRepeatController(Node):
                             if q_idx == r:
                                 debug_img = np.concatenate((debug_img, dash_img, image), axis = 0)
 
+                    ros.publish_topic('/debug_img', np_to_Image(debug_img)) # [debug]
+
                     # scan_values[abs(np.arange(len(scan_values)) - np.argmax(scan_values)) > 1] = 0 # [Approach 1] 保留最大值附近的值
                     
                     scan_values[scan_values < scan_values[scan_values != scan_values.max()].max()] = 0 # [Approach 2] 低于次高值的全部置零
@@ -213,14 +213,6 @@ class BaselineRepeatController(Node):
                     delta_p_distance = scan_values / scan_values.sum() @ scan_distances
                     # along_path_correction = (l_odomR_odomB - self.k_along_path * dt * delta_p_distance) / l_odomR_odomB # 0.75
                     along_path_correction = (l_odomR_odomB - self.k_along_path * delta_p_distance) / l_odomR_odomB # 0.01
-
-                    # print('scan_q_indices', scan_q_indices)
-                    # print('scan_distances', scan_distances)
-                    # print('scan_values', scan_values)
-                    # print('delta_p_distance', delta_p_distance)
-                    # print('along_path_correction', along_path_correction)
-                    # print('\n')
-                    ros.publish_topic('/debug_img', np_to_Image(debug_img)) # [debug]
 
                     if u > 1.0 - 1e-2 or l_odomR_odomB < self.distance_threshold:
                         self.pass_to_next_goal()
@@ -237,8 +229,8 @@ class BaselineRepeatController(Node):
                     correction_offset[:3, 3] *= along_path_correction
                     self.T_0_odomB = T_0_odomR @ correction_offset
                 
-                # TODO: delta distance 判断 (似乎不需要)
-                # T_odomR_odomB = t3d_ext.einv(T_0_odomR) @ self.T_0_odomB # 经过校正, 与 pass_to_next_goal 中的 T_odomA_odomB 不同
+                # delta distance 判断 (似乎不需要)
+                # corrected_T_odomR_odomB = t3d_ext.einv(T_0_odomR) @ self.T_0_odomB # 经过校正, 与 pass_to_next_goal 中的 T_odomA_odomB 不同
                 
                 # 发布调试话题
                 ros.publish_topic('/a', t3d_ext.e2PS(self.T_0_odomA, frame_id = 'odom'))

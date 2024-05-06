@@ -71,6 +71,10 @@ along_path_radius = fetch(config, ['along_path_radius'], 2)
 predict_number = fetch(config, ['predict_number'], 5)
 k_rotation = fetch(config, ['k_rotation'], 0.06)
 k_along_path = fetch(config, ['k_along_path'], 0.1)
+initial_compensation_rotation_update_rate = fetch(config, ['initial_compensation_rotation_update_rate'], 0.0)
+initial_compensation_translation_update_rate = fetch(config, ['initial_compensation_translation_update_rate'], 0.2)
+initial_compensation_rotation_threshold = fetch(config, ['initial_compensation_rotation_threshold'], 0.15)
+initial_compensation_translation_threshold = fetch(config, ['initial_compensation_translation_threshold'], 0.1)
 distance_threshold = fetch(config, ['distance_threshold'], 0.2)
 reference_velocity = fetch(config, ['reference_velocity'], 10.0)
 
@@ -96,6 +100,10 @@ controller = BaselineRepeatController('controller',
     predict_number = predict_number,
     k_rotation = k_rotation,
     k_along_path = k_along_path,
+    initial_compensation_rotation_update_rate = initial_compensation_rotation_update_rate,
+    initial_compensation_translation_update_rate = initial_compensation_translation_update_rate,
+    initial_compensation_rotation_threshold = initial_compensation_rotation_threshold,
+    initial_compensation_translation_threshold = initial_compensation_translation_threshold,
     distance_threshold = distance_threshold,
     R_min_abs = R_min_abs,
     reference_velocity = reference_velocity,
@@ -228,6 +236,10 @@ while not ros.is_shutdown():
         if cable_ctrl_main_passed_goal.poll():
             idx = cable_ctrl_main_passed_goal.read() # passed_goal: main -> controller
             if idx is None:
+                # 停车
+                cable_ctrl_actuator_command.write(('vw', 0, 0))
+                time.sleep(1.0)
+
                 # 保存 report
                 os.makedirs(report_path, exist_ok = True)
                 with open(os.path.join(report_path, 'record_traj.txt'), 'w') as f:
