@@ -5,8 +5,7 @@ from nav_msgs.msg import Odometry
 
 from multinodes import Cable
 
-from pf_drive.util import t3d_ext
-from pf_drive.util import ROSContext
+from pf_drive.util import ROSContext, t3d_ext
 from pf_drive.controller import KeyboardAckermannController
 from pf_drive.actuator import WebotsROSAckermannActuatorComputer, WebotsROSAckermannActuatorCaller
 

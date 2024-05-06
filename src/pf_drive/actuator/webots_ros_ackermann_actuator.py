@@ -13,8 +13,7 @@ from webots_ros.srv import set_float, set_floatRequest, set_floatResponse
 
 from multinodes import Node
 
-from pf_drive.util import t3d_ext
-from pf_drive.util import ROSContext
+from pf_drive.util import ROSContext, t3d_ext
 
 
 class WebotsRotationalMotorController:

@@ -12,8 +12,7 @@ import numpy as np
 
 from multinodes import Cable
 
-from pf_drive.util import t3d_ext, fetch, get_numbered_file_list
-from pf_drive.util import ROSContext
+from pf_drive.util import ROSContext, t3d_ext, fetch, get_numbered_file_list
 from pf_drive.actuator import WebotsROSAckermannActuatorComputer, WebotsROSAckermannActuatorCaller
 from pf_drive.controller import BaselineRepeatController
 from pf_drive.device import ROSCameraWithProcessingAndSending

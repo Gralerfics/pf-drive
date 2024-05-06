@@ -9,8 +9,7 @@ from webots_ros.srv import node_get_positionRequest, node_get_position, node_get
 
 from multinodes import Node
 
-from pf_drive.util import t3d_ext
-from pf_drive.util import ROSContext
+from pf_drive.util import ROSContext, t3d_ext
 
 
 """

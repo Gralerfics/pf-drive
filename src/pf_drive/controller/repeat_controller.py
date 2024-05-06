@@ -2,15 +2,12 @@ import time
 
 import numpy as np
 
-import cv2
-from cv_bridge import CvBridge
-
 import transforms3d as t3d
 
 from multinodes import Node
 
 from pf_drive.util import t3d_ext, ROSContext, ListQueue
-from pf_drive.util import NCC_horizontal_match
+from pf_drive.util.img import NCC_horizontal_match, np_to_Image
 
 
 """
@@ -86,7 +83,6 @@ class BaselineRepeatController(Node):
     def run(self):
         ros = ROSContext(self.name)
         ros.init_node(anonymous = False)
-        bridge = CvBridge()
 
         # 检查接口
         while not ros.is_shutdown():
@@ -149,21 +145,45 @@ class BaselineRepeatController(Node):
                     dt = current_time - timer_P
                     timer_P = current_time
 
-                    # along-path correction # TODO: * 估计有些超前
+                    # along-path correction
                     scan_q_indices = [q_idx for q_idx in range(2 * r + 1) if self.q[q_idx] is not None]
                     scan_q_indices = [scan_q_indices[0]] * (scan_q_indices[0]) + scan_q_indices
                     scan_q_indices = scan_q_indices + [scan_q_indices[-1]] * (2 * r - scan_q_indices[-1])
                     scan_distances = np.array([self.goal_distances[q_idx - r + i] for q_idx in scan_q_indices]) - self.goal_distances[i] - l_proj_odomA_odomR
                     scan_offsets, scan_values = np.zeros((2, len(scan_q_indices)))
+
+                    debug_img = None # [debug]
+                    dash_img = np.zeros_like(image)[:5, :] # [debug]
+
                     for k, q_idx in enumerate(scan_q_indices):
                         if q_idx == r:
                             k_r = k
                         img_ref = self.q[q_idx][0]
                         scan_offsets[k], scan_values[k] = NCC_horizontal_match(image, img_ref)
-                    scan_values[scan_values < min(0.1, scan_values.min() * 0.8)] = 0 # TODO, threshold 当前随意设置, 理应表示 NCC 底噪; 如果全都被滤除说明两图差距已经很大, 也许可以作为确认丢失的一种条件; 最小值 * 0.8 仅为防止崩溃, 无实际意义.
-                    delta_p = scan_values / scan_values.sum() @ scan_distances
-                    delta_distance = self.k_along_path * dt * delta_p
-                    along_path_correction = (l_odomR_odomB - delta_distance) / l_odomR_odomB # TODO: divide 0
+
+                        if debug_img is None: # [debug]
+                            debug_img = img_ref.copy()
+                        else:
+                            debug_img = np.concatenate((debug_img, dash_img, img_ref), axis = 0)
+                            if q_idx == r:
+                                debug_img = np.concatenate((debug_img, dash_img, image), axis = 0)
+
+                    # scan_values[abs(np.arange(len(scan_values)) - np.argmax(scan_values)) > 1] = 0 # [Approach 1] 保留最大值附近的值
+                    
+                    scan_values[scan_values < scan_values[scan_values != scan_values.max()].max()] = 0 # [Approach 2] 低于次高值的全部置零
+                    
+                    # scan_values[scan_values < min(0.1, scan_values.min() * 0.8)] = 0 # [Approach 3] 随意的设置, 理应表示 NCC 底噪; 如果全都被滤除说明两图差距已经很大, 也许可以作为确认丢失的一种条件; 最小值 * 0.8 仅为防止崩溃, 无实际意义.
+                    
+                    delta_p_distance = scan_values / scan_values.sum() @ scan_distances
+                    along_path_correction = (l_odomR_odomB - self.k_along_path * dt * delta_p_distance) / l_odomR_odomB # TODO: divide 0
+
+                    print('scan_q_indices', scan_q_indices)
+                    print('scan_distances', scan_distances)
+                    print('scan_values', scan_values)
+                    print('delta_p_distance', delta_p_distance)
+                    print('along_path_correction', along_path_correction)
+                    print('\n')
+                    ros.publish_topic('/debug_img', np_to_Image(debug_img)) # [debug]
 
                     if u > 1.0 - 1e-2 or l_odomR_odomB < self.distance_threshold:
                         self.pass_to_next_goal()
