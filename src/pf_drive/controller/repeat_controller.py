@@ -171,18 +171,24 @@ class BaselineRepeatController(Node):
                     # scan_values[abs(np.arange(len(scan_values)) - np.argmax(scan_values)) > 1] = 0 # [Approach 1] 保留最大值附近的值
                     
                     scan_values[scan_values < scan_values[scan_values != scan_values.max()].max()] = 0 # [Approach 2] 低于次高值的全部置零
-                    
+
                     # scan_values[scan_values < min(0.1, scan_values.min() * 0.8)] = 0 # [Approach 3] 随意的设置, 理应表示 NCC 底噪; 如果全都被滤除说明两图差距已经很大, 也许可以作为确认丢失的一种条件; 最小值 * 0.8 仅为防止崩溃, 无实际意义.
                     
-                    delta_p_distance = scan_values / scan_values.sum() @ scan_distances
-                    along_path_correction = (l_odomR_odomB - self.k_along_path * dt * delta_p_distance) / l_odomR_odomB # TODO: divide 0
+                    # scan_values -= np.mean(scan_values) # [Approach 4]
+                    # scan_values[scan_values < 0] = 0
+                    
+                    # scan_values[scan_values < scan_values.max()] = 0 # [Approach 5]
 
-                    # print('scan_q_indices', scan_q_indices)
-                    # print('scan_distances', scan_distances)
-                    # print('scan_values', scan_values)
-                    # print('delta_p_distance', delta_p_distance)
-                    # print('along_path_correction', along_path_correction)
-                    # print('\n')
+                    delta_p_distance = scan_values / scan_values.sum() @ scan_distances
+                    # along_path_correction = (l_odomR_odomB - self.k_along_path * dt * delta_p_distance) / l_odomR_odomB # 0.75
+                    along_path_correction = (l_odomR_odomB - self.k_along_path * delta_p_distance) / l_odomR_odomB # 0.01
+
+                    print('scan_q_indices', scan_q_indices)
+                    print('scan_distances', scan_distances)
+                    print('scan_values', scan_values)
+                    print('delta_p_distance', delta_p_distance)
+                    print('along_path_correction', along_path_correction)
+                    print('\n')
                     ros.publish_topic('/debug_img', np_to_Image(debug_img)) # [debug]
 
                     if u > 1.0 - 1e-2 or l_odomR_odomB < self.distance_threshold:
@@ -237,7 +243,7 @@ class BaselineRepeatController(Node):
                 # weights = np.array([0.0, 1.0] + [0.0] * (p - 2)) # r + 1 (Qb) ~ (Qi) ~ r + p (Qp) # = Approach 1
                 weights = np.array([0.0, 1.0, 0.6, 0.2, 0.1, 0.05, 0.03, 0.02, 0.01])
                 v_full = self.reference_velocity
-                v_bottom = v_full / 2 # [trial]
+                v_bottom = v_full / 4 # [trial]
 
                 T_q_indices = np.array([q_idx for q_idx in range(r + 1, r + p + 1) if self.q[q_idx] is not None])
                 T_0_Qi = np.array([self.q[q_idx][1] for q_idx in T_q_indices])
@@ -260,6 +266,8 @@ class BaselineRepeatController(Node):
                     if np.isnan(w_hat):
                         w_hat = 0.0
                 
+                # TODO: 减速需要提前, 用更远处的参考
+                # TODO: 预测量的参数似乎应该使用距离，此处再利用距离取相应的 odom 个数，否则就与 record 耦合了
                 if abs(w_hat) < 1e-2:
                     v_hat = v_full
                 else:
@@ -267,9 +275,6 @@ class BaselineRepeatController(Node):
                     offset = max(0, abs(R_hat) - self.R_min_abs)
                     v_hat = (1 - np.exp(-offset)) * (v_full - v_bottom) + v_bottom
                     w_hat = v_hat / R_hat
-
-                # print(v_hat, w_hat)
-                # print('\n')
 
                 self.io['actuator_command'].write(('vw', v_hat, w_hat))
                 operation_num += 1

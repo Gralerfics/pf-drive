@@ -16,9 +16,9 @@
         "supervisor_srv": "/car/supervisor"
     },
     "along_path_radius": 2,
-    "predict_number": 5,
-    "k_rotation": 0.03,
-    "k_along_path": 0.75,
+    "predict_number": 8,
+    "k_rotation": 0.02,
+    "k_along_path": 0.01,
     "distance_threshold": 0.5,
-    "reference_velocity": 9.0
+    "reference_velocity": 12.0
 }
