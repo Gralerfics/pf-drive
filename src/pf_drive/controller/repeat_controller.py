@@ -53,8 +53,17 @@ class BaselineRepeatController(Node):
         # 运行时
         self.goal_distances = [0.0] # distances between goal 0 and i
         self.goal_idx = -self.max_rp - 1 # goal just passed
+
         self.T_0_odomA = None
         self.T_0_odomB = None
+        self.record_T_odomA_odomB = None
+
+        self.initial_adjust_rotation_factor = 1.0
+        self.initial_adjust_translation_factor = 1.0
+        self.initial_adjust_rotation_update_rate = 0.0
+        self.initial_adjust_translation_update_rate = 0.2
+        self.initial_adjust_rotation_threshold = 0.15
+        self.initial_adjust_translation_threshold = 0.1
     
     def pass_to_next_goal(self):
         # loader 读完后不断发送 None, 此处不断入队, 直到 q_passed_idx + 1 项也为 None 时即结束
@@ -67,12 +76,34 @@ class BaselineRepeatController(Node):
 
         # rec_A, rec_B 有效则更新 T_0_odomA, T_0_odomB
         if self.q[self.q_r] is not None and self.q[self.q_r + 1] is not None:
+            # 若 T_0_odomA 和 T_0_odomB 有值, 即进行了一轮迭代, 记录迭代后校正的程度
+            if self.T_0_odomA is not None and self.T_0_odomB is not None:
+                initial_rotation = t3d.euler.mat2euler(self.record_T_odomA_odomB[:3, :3])[2]
+                initial_translation = t3d_ext.norm(self.record_T_odomA_odomB[:3, 3])
+                
+                corrected_T_odomA_odomB = t3d_ext.einv(self.T_0_odomA) @ self.T_0_odomB
+                rotation_factor = t3d.euler.mat2euler(corrected_T_odomA_odomB[:3, :3])[2] / initial_rotation if abs(initial_rotation) > self.initial_adjust_rotation_threshold else self.initial_adjust_rotation_factor
+                translation_factor = t3d_ext.norm(corrected_T_odomA_odomB[:3, 3]) / initial_translation if initial_translation > self.initial_adjust_translation_threshold else self.initial_adjust_translation_factor
+
+                self.initial_adjust_rotation_factor = self.initial_adjust_rotation_update_rate * rotation_factor + (1 - self.initial_adjust_rotation_update_rate) * self.initial_adjust_rotation_factor
+                self.initial_adjust_translation_factor = self.initial_adjust_translation_update_rate * translation_factor + (1 - self.initial_adjust_translation_update_rate) * self.initial_adjust_translation_factor
+
             # 若 T_0_odomB 无值则赋当前 odom 值
             if self.T_0_odomB is None:
                 self.T_0_odomB = self.io['odom'].read(block = True)
-            
             self.T_0_odomA = self.T_0_odomB
-            T_odomA_odomB = t3d_ext.einv(self.q[self.q_r][1]) @ self.q[self.q_r + 1][1] # T_odomA_odomB = T_{rec_r}_{rec_(r+1)} = inv(T_0_{rec_r}) * T_0_{rec_(r+1)}
+
+            # record 中的 T_odomA_odomB
+            self.record_T_odomA_odomB = t3d_ext.einv(self.q[self.q_r][1]) @ self.q[self.q_r + 1][1] # T_odomA_odomB = T_{rec_r}_{rec_(r+1)} = inv(T_0_{rec_r}) * T_0_{rec_(r+1)}
+            
+            # 根据先前的误差程度粗调 T_odomA_odomB 作为初始估计
+            T_odomA_odomB = self.record_T_odomA_odomB.copy()
+
+            print('Rough adjust:', self.initial_adjust_rotation_factor, self.initial_adjust_translation_factor)
+            print('\n')
+            T_odomA_odomB[:3, :3] = t3d.euler.euler2mat(0, 0, t3d.euler.mat2euler(T_odomA_odomB[:3, :3])[2] * self.initial_adjust_rotation_factor)
+            T_odomA_odomB[:3, 3] *= self.initial_adjust_translation_factor
+
             self.T_0_odomB = self.T_0_odomA @ T_odomA_odomB
 
         # 最新入队两个元素有效则更新 goal_distances
@@ -183,12 +214,12 @@ class BaselineRepeatController(Node):
                     # along_path_correction = (l_odomR_odomB - self.k_along_path * dt * delta_p_distance) / l_odomR_odomB # 0.75
                     along_path_correction = (l_odomR_odomB - self.k_along_path * delta_p_distance) / l_odomR_odomB # 0.01
 
-                    print('scan_q_indices', scan_q_indices)
-                    print('scan_distances', scan_distances)
-                    print('scan_values', scan_values)
-                    print('delta_p_distance', delta_p_distance)
-                    print('along_path_correction', along_path_correction)
-                    print('\n')
+                    # print('scan_q_indices', scan_q_indices)
+                    # print('scan_distances', scan_distances)
+                    # print('scan_values', scan_values)
+                    # print('delta_p_distance', delta_p_distance)
+                    # print('along_path_correction', along_path_correction)
+                    # print('\n')
                     ros.publish_topic('/debug_img', np_to_Image(debug_img)) # [debug]
 
                     if u > 1.0 - 1e-2 or l_odomR_odomB < self.distance_threshold:
