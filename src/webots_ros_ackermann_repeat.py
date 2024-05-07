@@ -68,9 +68,10 @@ max_steering_angle = fetch(config, ['world', 'car', 'max_steering_angle'], 0.6)
 R_min_abs = wheelbase / np.tan(max_steering_angle) + track / 2
 
 along_path_radius = fetch(config, ['along_path_radius'], 2)
-predict_number = fetch(config, ['predict_number'], 5)
-k_rotation = fetch(config, ['k_rotation'], 0.06)
-k_along_path = fetch(config, ['k_along_path'], 0.1)
+steering_predict_goals = fetch(config, ['steering_predict_goals'], 5)
+steering_weights = fetch(config, ['steering_weights'], [0.0, 1.0, 0.6, 0.1, 0.05, 0.03, 0.02, 0.01])
+k_rotation = fetch(config, ['k_rotation'], 0.03)
+k_along_path = fetch(config, ['k_along_path'], 0.01)
 initial_compensation_rotation_update_rate = fetch(config, ['initial_compensation_rotation_update_rate'], 0.0)
 initial_compensation_translation_update_rate = fetch(config, ['initial_compensation_translation_update_rate'], 0.2)
 initial_compensation_rotation_threshold = fetch(config, ['initial_compensation_rotation_threshold'], 0.15)
@@ -97,7 +98,8 @@ loader = RecordLoaderQueued('loader',
 controller = BaselineRepeatController('controller',
     horizontal_fov = horizontal_fov,
     along_path_radius = along_path_radius,
-    predict_number = predict_number,
+    steering_predict_goals = steering_predict_goals,
+    steering_weights = steering_weights,
     k_rotation = k_rotation,
     k_along_path = k_along_path,
     initial_compensation_rotation_update_rate = initial_compensation_rotation_update_rate,
@@ -107,6 +109,7 @@ controller = BaselineRepeatController('controller',
     distance_threshold = distance_threshold,
     R_min_abs = R_min_abs,
     reference_velocity = reference_velocity,
+    along_path_debug_image_topic = '/debug_img'
 )
 actuator_computer = WebotsROSAckermannActuatorComputer('actuator_computer',
     fetch(config, ['world', 'get_time_srv'], '/car/robot/get_time'),
@@ -251,7 +254,7 @@ while not ros.is_shutdown():
                 with open(os.path.join(report_path, 'parameters.json'), 'w') as f:
                     json.dump({
                         'along_path_radius': along_path_radius,
-                        'predict_number': predict_number,
+                        'steering_predict_goals': steering_predict_goals,
                         'k_rotation': k_rotation,
                         'k_along_path': k_along_path,
                         'distance_threshold': distance_threshold,
@@ -271,6 +274,7 @@ while not ros.is_shutdown():
         T_map_odom = np.dot(gt_pose, t3d_ext.einv(odom))
         ros.publish_tf(T_map_odom, 'map', 'odom')
         
-        ros.publish_topic('/recorded_odoms', record_odom_path)
+        # 路径调试话题
+        # ros.publish_topic('/recorded_odoms', record_odom_path)
         ros.publish_topic('/recorded_gts', record_gt_pose_path)
 

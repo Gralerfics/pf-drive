@@ -31,7 +31,8 @@ class BaselineRepeatController(Node):
         # 参数
         self.horizontal_fov = kwargs['horizontal_fov']
         self.along_path_radius = kwargs['along_path_radius'] # r
-        self.predict_number = kwargs['predict_number'] # p, TODO: 注意弯道的相对位置并没有补偿误差, p 过大会导致转向轨迹太贴近 record 中有误差的值.
+        self.steering_predict_goals = kwargs['steering_predict_goals'] # p, TODO: 注意弯道的相对位置并没有补偿误差, p 过大会导致转向轨迹太贴近 record 中有误差的值.
+        self.steering_weights = kwargs['steering_weights']
 
         self.k_rotation = kwargs['k_rotation']
         self.k_along_path = kwargs['k_along_path']
@@ -45,9 +46,11 @@ class BaselineRepeatController(Node):
         self.R_min_abs = kwargs['R_min_abs']
         self.reference_velocity = kwargs['reference_velocity']
 
+        self.along_path_debug_image_topic = kwargs.get('along_path_debug_image_topic', None)
+
         # 滑动窗口队列
-        self.max_rp = max(self.along_path_radius, self.predict_number)
-        self.q_r = self.along_path_radius # r (fixed, 相对滑动窗口队列)
+        self.max_rp = max(self.along_path_radius, self.steering_predict_goals)
+        self.q_r = self.along_path_radius
         self.q_size = self.along_path_radius + 1 + self.max_rp
         """
             0   1   2   3   4   5   6   7   8   9
@@ -63,7 +66,11 @@ class BaselineRepeatController(Node):
 
         self.T_0_odomA = None
         self.T_0_odomB = None
+        
         self.record_T_odomA_odomB = None
+        self.record_T_odomA_odomB_rotation = None
+        self.record_T_odomA_odomB_translation = None
+
         self.initial_compensation_rotation_factor = 1.0
         self.initial_compensation_translation_factor = 1.0
     
@@ -80,13 +87,10 @@ class BaselineRepeatController(Node):
         if self.q[self.q_r] is not None and self.q[self.q_r + 1] is not None:
             # 若 T_0_odomA 和 T_0_odomB 有值, 即进行了一轮迭代, 记录迭代后校正的程度
             if self.T_0_odomA is not None and self.T_0_odomB is not None:
-                initial_rotation = t3d.euler.mat2euler(self.record_T_odomA_odomB[:3, :3])[2]
-                initial_translation = t3d_ext.norm(self.record_T_odomA_odomB[:3, 3])
-                
                 corrected_T_odomA_odomB = t3d_ext.einv(self.T_0_odomA) @ self.T_0_odomB
-                rotation_factor = t3d.euler.mat2euler(corrected_T_odomA_odomB[:3, :3])[2] / initial_rotation if abs(initial_rotation) > self.initial_compensation_rotation_threshold else self.initial_compensation_rotation_factor
-                translation_factor = t3d_ext.norm(corrected_T_odomA_odomB[:3, 3]) / initial_translation if initial_translation > self.initial_compensation_translation_threshold else self.initial_compensation_translation_factor
-
+                rotation_factor = t3d.euler.mat2euler(corrected_T_odomA_odomB[:3, :3])[2] / self.record_T_odomA_odomB_rotation if abs(self.record_T_odomA_odomB_rotation) > self.initial_compensation_rotation_threshold else self.initial_compensation_rotation_factor
+                translation_factor = t3d_ext.norm(corrected_T_odomA_odomB[:3, 3]) / self.record_T_odomA_odomB_translation if self.record_T_odomA_odomB_translation > self.initial_compensation_translation_threshold else self.initial_compensation_translation_factor
+                
                 self.initial_compensation_rotation_factor = self.initial_compensation_rotation_update_rate * rotation_factor + (1 - self.initial_compensation_rotation_update_rate) * self.initial_compensation_rotation_factor
                 self.initial_compensation_translation_factor = self.initial_compensation_translation_update_rate * translation_factor + (1 - self.initial_compensation_translation_update_rate) * self.initial_compensation_translation_factor
 
@@ -97,11 +101,15 @@ class BaselineRepeatController(Node):
 
             # record 中的 T_odomA_odomB
             self.record_T_odomA_odomB = t3d_ext.einv(self.q[self.q_r][1]) @ self.q[self.q_r + 1][1] # T_odomA_odomB = T_{rec_r}_{rec_(r+1)} = inv(T_0_{rec_r}) * T_0_{rec_(r+1)}
-            
+            self.record_T_odomA_odomB_rotation = t3d.euler.mat2euler(self.record_T_odomA_odomB[:3, :3])[2]
+            self.record_T_odomA_odomB_translation = t3d_ext.norm(self.record_T_odomA_odomB[:3, 3])
+
             # 根据先前的误差程度粗调 T_odomA_odomB 作为初始估计
             T_odomA_odomB = self.record_T_odomA_odomB.copy()
-            T_odomA_odomB[:3, :3] = t3d.euler.euler2mat(0, 0, t3d.euler.mat2euler(T_odomA_odomB[:3, :3])[2] * self.initial_compensation_rotation_factor)
-            T_odomA_odomB[:3, 3] *= self.initial_compensation_translation_factor
+            if self.record_T_odomA_odomB_rotation > self.initial_compensation_rotation_threshold:
+                T_odomA_odomB[:3, :3] = t3d.euler.euler2mat(0, 0, t3d.euler.mat2euler(T_odomA_odomB[:3, :3])[2] * self.initial_compensation_rotation_factor)
+            if self.record_T_odomA_odomB_translation > self.initial_compensation_translation_threshold:
+                T_odomA_odomB[:3, 3] *= self.initial_compensation_translation_factor
             self.T_0_odomB = self.T_0_odomA @ T_odomA_odomB
 
         # 最新入队两个元素有效则更新 goal_distances
@@ -143,16 +151,17 @@ class BaselineRepeatController(Node):
             if self.q[r] is not None and self.q[r + 1] is None:
                 print('Finished.')
                 self.io['passed_goal'].write(None) # 结束信号
-                # self.io['actuator_command'].write(('vw', 0, 0)) # __main__ 进行停车
+                # self.io['actuator_command'].write(('vw', 0, 0)) # 由 __main__ 进行停车
                 break
             
-            # 运算
+            # 运算, TODO: 提高 correction 的影响力, 降低初始估计的贡献 (例如录制时在某处里程计较不准, repeat 时过去估计的惯性会导致无法即时响应); or 录制使用视觉里程计
             if self.io['processed_image'].poll() and self.io['odom'].poll():
                 image = self.io['processed_image'].read()
-                T_0_odomR = self.io['odom'].read() # odom, R: robot
+                odom = self.io['odom'].read() # odom, R: robot
 
                 i = self.goal_idx # q_idx - r + i = goal_idx
 
+                T_0_odomR = odom
                 T_odomR_odomB = t3d_ext.einv(T_0_odomR) @ self.T_0_odomB
 
                 t_0_odomA = t3d_ext.edt(self.T_0_odomA)
@@ -181,34 +190,35 @@ class BaselineRepeatController(Node):
                     scan_distances = np.array([self.goal_distances[q_idx - r + i] for q_idx in scan_q_indices]) - self.goal_distances[i] - l_proj_odomA_odomR
                     scan_offsets, scan_values = np.zeros((2, len(scan_q_indices)))
 
-                    debug_img = None # [debug]
-                    dash_img = np.zeros_like(image)[:5, :] # [debug]
-
+                    if self.along_path_debug_image_topic is not None: # [debug]
+                        debug_img = None
+                        dash_img = np.zeros_like(image)[:5, :]
                     for k, q_idx in enumerate(scan_q_indices):
                         if q_idx == r:
                             k_r = k
                         img_ref = self.q[q_idx][0]
                         scan_offsets[k], scan_values[k] = NCC_horizontal_match(image, img_ref)
+                        if self.along_path_debug_image_topic is not None: # [debug]
+                            if debug_img is None:
+                                debug_img = img_ref.copy()
+                            else:
+                                debug_img = np.concatenate((debug_img, dash_img, img_ref), axis = 0)
+                                if q_idx == r:
+                                    debug_img = np.concatenate((debug_img, dash_img, image), axis = 0)
+                    if self.along_path_debug_image_topic is not None: # [debug]
+                        ros.publish_topic(self.along_path_debug_image_topic, np_to_Image(debug_img))
 
-                        if debug_img is None: # [debug]
-                            debug_img = img_ref.copy()
-                        else:
-                            debug_img = np.concatenate((debug_img, dash_img, img_ref), axis = 0)
-                            if q_idx == r:
-                                debug_img = np.concatenate((debug_img, dash_img, image), axis = 0)
-
-                    ros.publish_topic('/debug_img', np_to_Image(debug_img)) # [debug]
-
-                    # scan_values[abs(np.arange(len(scan_values)) - np.argmax(scan_values)) > 1] = 0 # [Approach 1] 保留最大值附近的值
-                    
-                    scan_values[scan_values < scan_values[scan_values != scan_values.max()].max()] = 0 # [Approach 2] 低于次高值的全部置零
-
-                    # scan_values[scan_values < min(0.1, scan_values.min() * 0.8)] = 0 # [Approach 3] 随意的设置, 理应表示 NCC 底噪; 如果全都被滤除说明两图差距已经很大, 也许可以作为确认丢失的一种条件; 最小值 * 0.8 仅为防止崩溃, 无实际意义.
-                    
-                    # scan_values -= np.mean(scan_values) # [Approach 4]
+                    # [Approach 1] 保留最大值附近的值
+                    # scan_values[abs(np.arange(len(scan_values)) - np.argmax(scan_values)) > 1] = 0
+                    # [Approach 2] 低于次高值的全部置零
+                    scan_values[scan_values < scan_values[scan_values != scan_values.max()].max()] = 0
+                    # [Approach 3] 随意的设置, 理应表示 NCC 底噪; 如果全都被滤除说明两图差距已经很大, 也许可以作为确认丢失的一种条件; 最小值 * 0.8 仅为防止崩溃, 无实际意义.
+                    # scan_values[scan_values < min(0.1, scan_values.min() * 0.8)] = 0
+                    # [Approach 4]
+                    # scan_values -= np.mean(scan_values)
                     # scan_values[scan_values < 0] = 0
-                    
-                    # scan_values[scan_values < scan_values.max()] = 0 # [Approach 5]
+                    # [Approach 5]
+                    # scan_values[scan_values < scan_values.max()] = 0
 
                     delta_p_distance = scan_values / scan_values.sum() @ scan_distances
                     # along_path_correction = (l_odomR_odomB - self.k_along_path * dt * delta_p_distance) / l_odomR_odomB # 0.75
@@ -261,10 +271,11 @@ class BaselineRepeatController(Node):
                 # self.io['actuator_command'].write(('vw', v, w))
                 # operation_num += 1
 
-                # 执行器 [Approach 2: 加权预测], TODO: velocity control & weights
+                # 执行器 [Approach 2: 加权预测], TODO: velocity control
 
                 # weights = np.array([0.0, 1.0] + [0.0] * (p - 2)) # r + 1 (Qb) ~ (Qi) ~ r + p (Qp) # = Approach 1
-                weights = np.array([0.0, 1.0, 0.6, 0.2, 0.1, 0.05, 0.03, 0.02, 0.01])
+                weights = np.array(self.steering_weights)
+
                 v_full = self.reference_velocity
                 v_bottom = v_full / 4 # [trial]
 
@@ -301,4 +312,10 @@ class BaselineRepeatController(Node):
 
                 self.io['actuator_command'].write(('vw', v_hat, w_hat))
                 operation_num += 1
+
+                # 队内原始 odom 路径调试话题, Qr 与 T_0_odomA 对齐
+                aligned_q_indices = np.array([q_idx for q_idx in range(r, r + p + 1) if self.q[q_idx] is not None])
+                aligned_q_odoms = np.array([self.q[q_idx][1] for q_idx in aligned_q_indices])
+                aligned_q_odoms = self.T_0_odomA @ t3d_ext.einv(aligned_q_odoms[0]) @ aligned_q_odoms
+                ros.publish_topic('/recorded_odoms', t3d_ext.es2P(aligned_q_odoms, frame_id = 'odom'))
 
