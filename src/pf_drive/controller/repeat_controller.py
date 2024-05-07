@@ -140,8 +140,9 @@ class BaselineRepeatController(Node):
         rps = self.max_rps
         rp = self.max_rp
 
+        f = 15 # TODO: parameter
         v_full = self.reference_velocity
-        v_low = 2.0 # TODO
+        v_under = np.sqrt(f * self.R_min_abs)
         weights = np.pad(self.steering_weights, (0, rps - len(self.steering_weights)), 'constant', constant_values = 0)
 
         v_target = v_full
@@ -222,20 +223,8 @@ class BaselineRepeatController(Node):
                     if self.along_path_debug_image_topic is not None: # [debug]
                         ros.publish_topic(self.along_path_debug_image_topic, np_to_Image(debug_img))
 
-                    # [Approach 1] 保留最大值附近的值
-                    # scan_values[abs(np.arange(len(scan_values)) - np.argmax(scan_values)) > 1] = 0
-                    # [Approach 2] 低于次高值的全部置零
                     scan_values[scan_values < scan_values[scan_values != scan_values.max()].max()] = 0
-                    # [Approach 3] 随意的设置, 理应表示 NCC 底噪; 如果全都被滤除说明两图差距已经很大, 也许可以作为确认丢失的一种条件; 最小值 * 0.8 仅为防止崩溃, 无实际意义.
-                    # scan_values[scan_values < min(0.1, scan_values.min() * 0.8)] = 0
-                    # [Approach 4]
-                    # scan_values -= np.mean(scan_values)
-                    # scan_values[scan_values < 0] = 0
-                    # [Approach 5]
-                    # scan_values[scan_values < scan_values.max()] = 0
-
                     delta_p_distance = scan_values / scan_values.sum() @ scan_distances
-                    # along_path_correction = (l_odomR_odomB - self.k_along_path * dt * delta_p_distance) / l_odomR_odomB # 0.75
                     along_path_correction = (l_odomR_odomB - self.k_along_path * delta_p_distance) / l_odomR_odomB # 0.01
 
                     if u > 1.0 - 1e-2 or l_odomR_odomB < self.distance_threshold:
@@ -253,39 +242,12 @@ class BaselineRepeatController(Node):
                     correction_offset[:3, 3] *= along_path_correction
                     self.T_0_odomB = T_0_odomR @ correction_offset
                 
-                # delta distance 判断 (似乎不需要)
-                # corrected_T_odomR_odomB = t3d_ext.einv(T_0_odomR) @ self.T_0_odomB # 经过校正, 与 pass_to_next_goal 中的 T_odomA_odomB 不同
-                
                 # 发布调试话题
                 ros.publish_topic('/a', t3d_ext.e2PS(self.T_0_odomA, frame_id = 'odom'))
                 ros.publish_topic('/b', t3d_ext.e2PS(self.T_0_odomB, frame_id = 'odom'))
                 ros.publish_topic('/r', t3d_ext.e2PS(T_0_odomR, frame_id = 'odom'))
-                
-                # 执行器 [Approach 1: r + 2 预测]
-                # v = self.reference_velocity
-
-                # T_0_qN = [item for item in self.q.q[r:(r + 3)] if item is not None][-1][1]
-                # T_0_qB = self.q[r + 1][1]
-                # T_0_odomN = self.T_0_odomB @ t3d_ext.einv(T_0_qB) @ T_0_qN
-                # T_odomR_odomN = t3d_ext.einv(T_0_odomR) @ T_0_odomN
-
-                # dy = T_odomR_odomN[1, 3]
-                # dx = T_odomR_odomN[0, 3]
-                # ros.publish_topic('/goal', t3d_ext.e2PS(T_0_odomN, frame_id = 'odom'))
-
-                # if abs(dy) < 1e-2:
-                #     w = 0.0
-                # else:
-                #     d_square = dx ** 2 + dy ** 2
-                #     R = d_square / 2 / dy
-                #     if abs(R) < self.R_min_abs:
-                #         R = np.sign(R) * self.R_min_abs
-                #     w = v / R
-
-                # self.io['actuator_command'].write(('vw', v, w))
-                # operation_num += 1
-
-                # 执行器 [Approach 2: 加权预测], TODO: velocity control
+            
+                # 执行器
                 p_indices = np.array([q_idx for q_idx in range(r + 1, r + rp + 1) if self.q[q_idx] is not None])
                 T_0_Qi = np.array([self.q[q_idx][1] for q_idx in p_indices])
                 T_odomR_odomQi = (t3d_ext.einv(T_0_odomR) @ self.T_0_odomB @ t3d_ext.einv(T_0_Qi[0])) @ T_0_Qi
@@ -310,16 +272,6 @@ class BaselineRepeatController(Node):
                 # 速度控制, TODO: 预测量的参数似乎应该使用距离，此处再利用距离取相应的 odom 个数，否则就与 record 耦合了
                 s_indices = np.array([q_idx for q_idx in range(r + rps + 1) if self.q[q_idx] is not None])
 
-                # [Approach 1]
-                # yaws = np.array([t3d.euler.mat2euler(self.q[q_idx][1][:3, :3])[2] for q_idx in s_indices])
-                # yaw_r = t3d.euler.mat2euler(self.q[r][1][:3, :3])[2]
-                # yaw_diffs = np.abs(yaws - yaw_r)
-                # flag = yaw_diffs > np.pi
-                # yaw_diffs[flag] = 2 * np.pi - yaw_diffs[flag]
-
-                # v_target TODO
-
-                # [Approach 2] 队内点相对当前点所需的转弯半径取最小值; 按理说应该是局部曲率而不是全都相对当前点.
                 xy_0_Qi = np.array([self.q[q_idx][1][:2, 3] for q_idx in s_indices])
                 vs = xy_0_Qi[1:] - xy_0_Qi[:-1]
                 ls = np.linalg.norm(vs, axis = 1)
@@ -331,16 +283,17 @@ class BaselineRepeatController(Node):
                 if np.isnan(R_min):
                     v_target = v_full
                 else:
-                    offset = max(0, R_min - self.R_min_abs) # TODO
-                    k = 0.75 # TODO
-                    v_target = (1 - np.exp(-offset)) * k * (v_full - v_low) + v_low # TODO
+                    # offset = max(0, R_min - self.R_min_abs)
+                    # k = 0.75
+                    # v_target = (1 - np.exp(-offset)) * k * (v_full - v_under) + v_under # TODO
+                    v_target = np.clip(np.sqrt(f * R_min), v_under, v_full) # TODO
                     w_target = v_target * w_target / v_full
                 
                 if np.isnan(w_target):
                     w_target = 0.0
                 
-                # print(R_min, v_target, w_target)
-                # print('\n')
+                print(R_min, v_target, w_target)
+                print('\n')
 
                 self.io['actuator_command'].write(('vw', v_target, w_target))
                 operation_num += 1
