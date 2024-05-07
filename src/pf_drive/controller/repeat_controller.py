@@ -33,6 +33,7 @@ class BaselineRepeatController(Node):
         self.along_path_radius = kwargs['along_path_radius'] # r
         self.steering_predict_goals = kwargs['steering_predict_goals'] # p, TODO: 注意弯道的相对位置并没有补偿误差, p 过大会导致转向轨迹太贴近 record 中有误差的值.
         self.steering_weights = kwargs['steering_weights']
+        self.slowing_predict_goals = kwargs['slowing_predict_goals'] # s
 
         self.k_rotation = kwargs['k_rotation']
         self.k_along_path = kwargs['k_along_path']
@@ -42,16 +43,22 @@ class BaselineRepeatController(Node):
         self.initial_compensation_rotation_threshold = kwargs['initial_compensation_rotation_threshold']
         self.initial_compensation_translation_threshold = kwargs['initial_compensation_translation_threshold']
 
+        self.l = kwargs['track']
+        self.d = kwargs['wheelbase']
+        self.r = kwargs['wheel_radius']
+        self.max_phi = kwargs['max_steering_angle']
+        self.R_min_abs = self.d / np.tan(self.max_phi) + self.l / 2
+
         self.distance_threshold = kwargs['distance_threshold']
-        self.R_min_abs = kwargs['R_min_abs']
         self.reference_velocity = kwargs['reference_velocity']
 
         self.along_path_debug_image_topic = kwargs.get('along_path_debug_image_topic', None)
 
         # 滑动窗口队列
+        self.max_rps = max(self.along_path_radius, self.steering_predict_goals, self.slowing_predict_goals)
         self.max_rp = max(self.along_path_radius, self.steering_predict_goals)
         self.q_r = self.along_path_radius
-        self.q_size = self.along_path_radius + 1 + self.max_rp
+        self.q_size = self.along_path_radius + 1 + self.max_rps
         """
             0   1   2   3   4   5   6   7   8   9
             x   x   D0  D1  D2  D3  D4  D5  D6  D7
@@ -62,7 +69,7 @@ class BaselineRepeatController(Node):
 
         # 运行时
         self.goal_distances = [0.0] # distances between goal 0 and i
-        self.goal_idx = -self.max_rp - 1 # goal just passed
+        self.goal_idx = -self.max_rps - 1 # goal just passed
 
         self.T_0_odomA = None
         self.T_0_odomB = None
@@ -128,9 +135,16 @@ class BaselineRepeatController(Node):
                 continue
             break
 
-        # 简写
+        # 常用量
         r = self.along_path_radius
-        p = self.max_rp
+        rps = self.max_rps
+        rp = self.max_rp
+
+        v_full = self.reference_velocity
+        v_low = 2.0 # TODO
+        weights = np.pad(self.steering_weights, (0, rps - len(self.steering_weights)), 'constant', constant_values = 0)
+
+        v_target = v_full
 
         # 凑满 q_size 个数据, 初始皆为 None, 从 passed_idx 为 -self.max_rp - 1 开始逐个入队直到 0
         self.q.q = [None] * self.q_size
@@ -272,15 +286,8 @@ class BaselineRepeatController(Node):
                 # operation_num += 1
 
                 # 执行器 [Approach 2: 加权预测], TODO: velocity control
-
-                # weights = np.array([0.0, 1.0] + [0.0] * (p - 2)) # r + 1 (Qb) ~ (Qi) ~ r + p (Qp) # = Approach 1
-                weights = np.array(self.steering_weights)
-
-                v_full = self.reference_velocity
-                v_bottom = v_full / 4 # [trial]
-
-                T_q_indices = np.array([q_idx for q_idx in range(r + 1, r + p + 1) if self.q[q_idx] is not None])
-                T_0_Qi = np.array([self.q[q_idx][1] for q_idx in T_q_indices])
+                p_indices = np.array([q_idx for q_idx in range(r + 1, r + rp + 1) if self.q[q_idx] is not None])
+                T_0_Qi = np.array([self.q[q_idx][1] for q_idx in p_indices])
                 T_odomR_odomQi = (t3d_ext.einv(T_0_odomR) @ self.T_0_odomB @ t3d_ext.einv(T_0_Qi[0])) @ T_0_Qi
                 
                 xy = np.array([item[:2, 3] for item in T_odomR_odomQi])
@@ -294,27 +301,52 @@ class BaselineRepeatController(Node):
                     w = v_full / R
                     w[np.isnan(w)] = 0.0
 
-                    weights_q = weights[T_q_indices - (r + 1)]
-                    w_hat = weights_q @ w / np.sum(weights_q)
+                    weights_q = weights[p_indices - (r + 1)]
+                    w_target = weights_q @ w / np.sum(weights_q)
 
-                    if np.isnan(w_hat):
-                        w_hat = 0.0
+                    if np.isnan(w_target):
+                        w_target = 0.0
                 
-                # TODO: 减速需要提前, 用更远处的参考
-                # TODO: 预测量的参数似乎应该使用距离，此处再利用距离取相应的 odom 个数，否则就与 record 耦合了
-                if abs(w_hat) < 1e-2:
-                    v_hat = v_full
-                else:
-                    R_hat = v_full / w_hat
-                    offset = max(0, abs(R_hat) - self.R_min_abs)
-                    v_hat = (1 - np.exp(-offset)) * (v_full - v_bottom) + v_bottom
-                    w_hat = v_hat / R_hat
+                # 速度控制, TODO: 预测量的参数似乎应该使用距离，此处再利用距离取相应的 odom 个数，否则就与 record 耦合了
+                s_indices = np.array([q_idx for q_idx in range(r + rps + 1) if self.q[q_idx] is not None])
 
-                self.io['actuator_command'].write(('vw', v_hat, w_hat))
+                # [Approach 1]
+                # yaws = np.array([t3d.euler.mat2euler(self.q[q_idx][1][:3, :3])[2] for q_idx in s_indices])
+                # yaw_r = t3d.euler.mat2euler(self.q[r][1][:3, :3])[2]
+                # yaw_diffs = np.abs(yaws - yaw_r)
+                # flag = yaw_diffs > np.pi
+                # yaw_diffs[flag] = 2 * np.pi - yaw_diffs[flag]
+
+                # v_target TODO
+
+                # [Approach 2] 队内点相对当前点所需的转弯半径取最小值; 按理说应该是局部曲率而不是全都相对当前点.
+                xy_0_Qi = np.array([self.q[q_idx][1][:2, 3] for q_idx in s_indices])
+                vs = xy_0_Qi[1:] - xy_0_Qi[:-1]
+                ls = np.linalg.norm(vs, axis = 1)
+                with np.errstate(divide = 'ignore', invalid = 'ignore'):
+                    phis_abs = np.abs(np.arccos(np.clip(np.sum(vs[:-1] * vs[1:], axis = 1) / (ls[:-1] * ls[1:]), -1.0, 1.0)))
+                    Rs_abs = self.d / np.tan(phis_abs)
+                    R_min = Rs_abs.min()
+                
+                if np.isnan(R_min):
+                    v_target = v_full
+                else:
+                    offset = max(0, R_min - self.R_min_abs) # TODO
+                    k = 0.75 # TODO
+                    v_target = (1 - np.exp(-offset)) * k * (v_full - v_low) + v_low # TODO
+                    w_target = v_target * w_target / v_full
+                
+                if np.isnan(w_target):
+                    w_target = 0.0
+                
+                # print(R_min, v_target, w_target)
+                # print('\n')
+
+                self.io['actuator_command'].write(('vw', v_target, w_target))
                 operation_num += 1
 
                 # 队内原始 odom 路径调试话题, Qr 与 T_0_odomA 对齐
-                aligned_q_indices = np.array([q_idx for q_idx in range(r, r + p + 1) if self.q[q_idx] is not None])
+                aligned_q_indices = np.array([q_idx for q_idx in range(r, r + rps + 1) if self.q[q_idx] is not None])
                 aligned_q_odoms = np.array([self.q[q_idx][1] for q_idx in aligned_q_indices])
                 aligned_q_odoms = self.T_0_odomA @ t3d_ext.einv(aligned_q_odoms[0]) @ aligned_q_odoms
                 ros.publish_topic('/recorded_odoms', t3d_ext.es2P(aligned_q_odoms, frame_id = 'odom'))

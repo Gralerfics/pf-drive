@@ -65,11 +65,11 @@ track = fetch(config, ['world', 'car', 'track'], 1.628)
 wheelbase = fetch(config, ['world', 'car', 'wheelbase'], 2.995)
 wheel_radius = fetch(config, ['world', 'car', 'wheel_radius'], 0.38)
 max_steering_angle = fetch(config, ['world', 'car', 'max_steering_angle'], 0.6)
-R_min_abs = wheelbase / np.tan(max_steering_angle) + track / 2
 
 along_path_radius = fetch(config, ['along_path_radius'], 2)
 steering_predict_goals = fetch(config, ['steering_predict_goals'], 5)
 steering_weights = fetch(config, ['steering_weights'], [0.0, 1.0, 0.6, 0.1, 0.05, 0.03, 0.02, 0.01])
+slowing_predict_goals = fetch(config, ['slowing_predict_goals'], 15)
 k_rotation = fetch(config, ['k_rotation'], 0.03)
 k_along_path = fetch(config, ['k_along_path'], 0.01)
 initial_compensation_rotation_update_rate = fetch(config, ['initial_compensation_rotation_update_rate'], 0.0)
@@ -100,23 +100,27 @@ controller = BaselineRepeatController('controller',
     along_path_radius = along_path_radius,
     steering_predict_goals = steering_predict_goals,
     steering_weights = steering_weights,
+    slowing_predict_goals = slowing_predict_goals,
     k_rotation = k_rotation,
     k_along_path = k_along_path,
     initial_compensation_rotation_update_rate = initial_compensation_rotation_update_rate,
     initial_compensation_translation_update_rate = initial_compensation_translation_update_rate,
     initial_compensation_rotation_threshold = initial_compensation_rotation_threshold,
     initial_compensation_translation_threshold = initial_compensation_translation_threshold,
+    track = track,
+    wheelbase = wheelbase,
+    wheel_radius = wheel_radius,
+    max_steering_angle = max_steering_angle,
     distance_threshold = distance_threshold,
-    R_min_abs = R_min_abs,
     reference_velocity = reference_velocity,
     along_path_debug_image_topic = '/debug_img'
 )
 actuator_computer = WebotsROSAckermannActuatorComputer('actuator_computer',
     fetch(config, ['world', 'get_time_srv'], '/car/robot/get_time'),
-    fetch(config, ['world', 'car', 'track'], 1.628),
-    fetch(config, ['world', 'car', 'wheelbase'], 2.995),
-    fetch(config, ['world', 'car', 'wheel_radius'], 0.38),
-    fetch(config, ['world', 'car', 'max_steering_angle'], 0.6),
+    track,
+    wheelbase,
+    wheel_radius,
+    max_steering_angle,
     '/car/left_rear_position_sensor/value',
     '/car/right_rear_position_sensor/value'
 )
@@ -258,6 +262,7 @@ while not ros.is_shutdown():
                         'k_rotation': k_rotation,
                         'k_along_path': k_along_path,
                         'distance_threshold': distance_threshold,
+                        # TODO: 后加的参数存一下
                     }, f)
                 break
             else:

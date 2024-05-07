@@ -116,8 +116,8 @@ WorldInfo {
   ]
 }
 Viewpoint {
-  orientation 0.21457539953060897 0.6606657068327585 -0.7193595913946315 0.9072553555073554
-  position -27.340473706266256 55.16893278465725 16.294170643736496
+  orientation 0.19227317316242032 0.7396386282013149 -0.6449540499559107 0.8312799987786327
+  position -31.593870759489818 55.993511278319644 19.672016293265017
   near 1
   follow "car:body"
   followType "Mounted Shot"
@@ -375,8 +375,8 @@ StraightRoadSegment {
   length 30
 }
 DEF car Robot {
-  translation -13.8856 42.0783 0.739252
-  rotation -0.011914942581152659 0.7869494779778033 0.6169023855147187 0.02714666881528023
+  translation -13.8769 42.0783 0.789244
+  rotation -0.011925544496089175 0.7860201132496683 0.6180858863907591 0.027179137373547428
   children [
     Camera {
       translation 1.7 0 1.28
@@ -402,7 +402,7 @@ DEF car Robot {
     }
     HingeJoint {
       jointParameters HingeJointParameters {
-        position -0.005355345326449056
+        position -0.004838151492623606
         axis 0 1 0
         suspensionSpringConstant 100000
         suspensionDampingConstant 4000
@@ -421,7 +421,7 @@ DEF car Robot {
       ]
       endPoint Solid {
         translation 0 -0.8139999999999433 0
-        rotation -0.9999912157297176 -0.002966541068346576 -0.002961097345750099 1.571064008579612
+        rotation -0.9999926815343918 -0.0027080152539172473 -0.0027025045866253842 1.5710625411568082
         children [
           DEF car_wheel_shape Shape {
             appearance Appearance {
@@ -448,7 +448,7 @@ DEF car Robot {
     }
     HingeJoint {
       jointParameters HingeJointParameters {
-        position 67.52008810822522
+        position 67.52060119566666
         axis 0 1 0
         suspensionSpringConstant 100000
         suspensionDampingConstant 4000
@@ -466,8 +466,8 @@ DEF car Robot {
         }
       ]
       endPoint Solid {
-        translation 0 0.813999999999964 0
-        rotation -0.5668159611512326 -0.5824714695433688 -0.5826205054340198 2.108697213337207
+        translation 0 0.81399999999994 0
+        rotation -0.5670135259428267 -0.5823751902312316 -0.5825245052364925 2.108398379238913
         children [
           DEF car_wheel_shape Shape {
             appearance Appearance {
@@ -494,7 +494,7 @@ DEF car Robot {
     }
     HingeJoint {
       jointParameters HingeJointParameters {
-        position -1.1362237170567644e-05
+        position -3.1589246756108194e-08
         axis 0 0 1
         anchor 2.995 -0.814 0
         suspensionSpringConstant 100000
@@ -513,12 +513,12 @@ DEF car Robot {
         }
       ]
       endPoint Solid {
-        translation 2.995002777896053 -0.8140000656738259 0.0686614706607128
-        rotation 0.17127228445406165 0.0003567481248949549 -0.9852236686705523 0.0001322638584427121
+        translation 2.9950027778967967 -0.8140000656423505 0.0686614706607128
+        rotation 0.18703638187756383 0.00039064325762503793 -0.9823529097284719 0.00012111618353983296
         children [
           HingeJoint {
             jointParameters HingeJointParameters {
-              position -0.6146718358000168
+              position -0.6136011814396645
               axis 0 1 0
               dampingConstant 2
             }
@@ -528,7 +528,7 @@ DEF car Robot {
               }
             ]
             endPoint Solid {
-              rotation -0.9123710763581824 -0.28934851536700973 -0.2895797915599757 1.6631721377150634
+              rotation -0.9126547527433144 -0.2889012146094934 -0.2891321332750805 1.6628625848940044
               children [
                 DEF car_wheel_shape Shape {
                   appearance Appearance {
@@ -565,7 +565,7 @@ DEF car Robot {
     }
     HingeJoint {
       jointParameters HingeJointParameters {
-        position 1.7609657824172772e-05
+        position 1.0424025900027986e-05
         axis 0 0 1
         anchor 2.995 0.814 0
         suspensionSpringConstant 100000
@@ -584,12 +584,12 @@ DEF car Robot {
         }
       ]
       endPoint Solid {
-        translation 2.9950026461497568 0.8140007823107918 0.06891046181125504
-        rotation -0.42143317476966496 0.001430838711745321 0.9068583306692077 3.44134373517016e-05
+        translation 2.995002646155378 0.8140007822917774 0.06891046181125351
+        rotation -0.5168374326823552 0.001756609635222433 0.856081761574735 2.806097166371368e-05
         children [
           HingeJoint {
             jointParameters HingeJointParameters {
-              position -0.6275164687604103
+              position -0.6264728587152318
               axis 0 1 0
               dampingConstant 2
             }
@@ -599,7 +599,7 @@ DEF car Robot {
               }
             ]
             endPoint Solid {
-              rotation -0.9088139264455561 -0.29512357880529094 -0.2948886575163053 1.6654731468258437
+              rotation -0.9090949277360877 -0.2946901864740733 -0.2944556101696717 1.665165379018524
               children [
                 DEF car_wheel_shape Shape {
                   appearance Appearance {
@@ -933,8 +933,8 @@ CurvedRoadSegment {
   curvatureRadius 40.5
 }
 Robot {
-  translation -4.543417209089111 27.585758992092405 0.31692102100673075
-  rotation 0.005121142919312557 -0.8371609603572969 0.546932628711113 0.005368109276511937
+  translation -4.543229492296682 27.585760680095085 0.3169205538275912
+  rotation 0.005121731035931964 -0.8371943291076834 0.5468815440121667 0.00536831562014054
   children [
     Pose {
       translation 2.995 0.814 0
@@ -942,14 +942,14 @@ Robot {
       children [
         DEF LEFT_STEER_HINGE2 Hinge2Joint {
           jointParameters HingeJointParameters {
-            position 6.901672037772823e-07
+            position 7.153144145999824e-07
             axis 0 0 -1
             suspensionSpringConstant 100000
             suspensionDampingConstant 4000
             suspensionAxis 0 0 1
           }
           jointParameters2 JointParameters {
-            position 5.988841738940594e-06
+            position 6.117358352514032e-06
             axis 0 -1 0
             dampingConstant 2
           }
@@ -985,7 +985,7 @@ Robot {
             endPoint Slot {
               type "vehicle wheel"
               endPoint Solid {
-                rotation 0.012703113237668161 -0.9996816373960139 -0.02180033869680142 5.227712859341009
+                rotation 0.012703103474949105 -0.9996816379556712 -0.02180031872177722 5.2277129883649245
                 children [
                   DEF WHEEL_SLOT Group {
                     children [
@@ -1132,8 +1132,8 @@ Robot {
                   density -1
                   mass 30
                 }
-                linearVelocity 9.071445817640002e-08 1.3543944111035376e-09 2.5167239906901764e-10
-                angularVelocity -4.276826371813742e-09 3.981292495297853e-07 1.1889944776976386e-10
+                linearVelocity 2.3854239288643466e-07 5.278629992281792e-09 -2.789133740536574e-08
+                angularVelocity -1.5723139226174624e-08 1.0367202828509637e-06 4.513166106787262e-10
               }
             }
           }
@@ -1145,14 +1145,14 @@ Robot {
       children [
         DEF RIGHT_STEER_HINGE2 Hinge2Joint {
           jointParameters HingeJointParameters {
-            position 0.012262489020771256
+            position 0.01226249927221399
             axis 0 0 -1
             suspensionSpringConstant 100000
             suspensionDampingConstant 4000
             suspensionAxis 0 0 1
           }
           jointParameters2 JointParameters {
-            position -4.3188502818108365e-05
+            position -4.314500832027167e-05
             axis 0 1 0
             dampingConstant 2
           }
@@ -1188,7 +1188,7 @@ Robot {
             endPoint Slot {
               type "vehicle wheel"
               endPoint Solid {
-                rotation -0.0064009610687691156 0.9999176250094267 -0.011125236757183394 5.238742871530849
+                rotation -0.006400956891205007 0.9999176251350894 -0.011125227866419321 5.23874291512913
                 children [
                   DEF WHEEL_SLOT Group {
                     children [
@@ -1331,8 +1331,8 @@ Robot {
                   ]
                 }
                 physics USE WHEEL_PHYSICS
-                linearVelocity 9.09123677870193e-08 1.3293607065195963e-09 3.718216513940812e-10
-                angularVelocity -4.250263790729756e-09 3.9843823908252216e-07 1.2384770777301302e-10
+                linearVelocity 2.3943932681733324e-07 5.030344324135952e-09 -2.7380596559445137e-08
+                angularVelocity -1.556093648018052e-08 1.037073932493941e-06 4.679152657914389e-10
               }
             }
           }
@@ -1345,7 +1345,7 @@ Robot {
       children [
         DEF LEFT_REAR_WHEEL_HINGE HingeJoint {
           jointParameters HingeJointParameters {
-            position -4.034823847196652
+            position -4.034978214627858
             axis 0 -1 0
             dampingConstant 2
             suspensionSpringConstant 100000
@@ -1365,7 +1365,7 @@ Robot {
             endPoint Slot {
               type "vehicle wheel"
               endPoint Solid {
-                rotation 0 -1 0 1.0526796549502928
+                rotation 0 -1 0 1.0525252875190858
                 children [
                   DEF WHEEL_SLOT Group {
                     children [
@@ -1509,8 +1509,8 @@ Robot {
                   ]
                 }
                 physics USE WHEEL_PHYSICS
-                linearVelocity 9.890346526494771e-08 9.850207681508999e-10 2.938158513869483e-08
-                angularVelocity -3.8127596490493315e-09 2.6449872470271176e-07 1.2387857686709517e-10
+                linearVelocity 2.719468369864054e-07 3.8396384896584496e-09 4.557720736385735e-08
+                angularVelocity -1.4944660742944903e-08 7.281974457978743e-07 4.691907042015962e-10
               }
             }
           }
@@ -1522,7 +1522,7 @@ Robot {
       children [
         DEF RIGHT_REAR_WHEEL_HINGE HingeJoint {
           jointParameters HingeJointParameters {
-            position -0.8966346033395124
+            position -0.8967900671911418
             axis 0 1 0
             dampingConstant 2
             suspensionSpringConstant 100000
@@ -1542,7 +1542,7 @@ Robot {
             endPoint Slot {
               type "vehicle wheel"
               endPoint Solid {
-                rotation 0 1 0 4.244297787669006
+                rotation 0 1 0 4.2441423238173765
                 children [
                   DEF WHEEL_SLOT Group {
                     children [
@@ -1685,8 +1685,8 @@ Robot {
                   ]
                 }
                 physics USE WHEEL_PHYSICS
-                linearVelocity 9.913035525190132e-08 9.85781585635429e-10 2.9503001877025987e-08
-                angularVelocity -3.814242280962343e-09 2.65105745681408e-07 1.2389288369903117e-10
+                linearVelocity 2.7282676991951575e-07 3.842456735795159e-09 4.608780617649575e-08
+                angularVelocity -1.495100977513097e-08 7.305517803019207e-07 4.692435823873468e-10
               }
             }
           }
@@ -3589,15 +3589,15 @@ Robot {
   ]
   customData "2.995 1.628 1.628 0.374 0.374 1800 2 C 250 50000 1000 6500 34.11 0.136 -0.00001461 0.25 3000 1000 6 17 -12.5 12.5 8 5.35 4.3 4 sounds/engine.wav "
   supervisor TRUE
-  linearVelocity 1.1365119438600858e-07 1.3471998900625561e-09 6.888821282700519e-07
-  angularVelocity -4.225102077883009e-09 3.987179220293737e-07 1.2655446270153244e-10
+  linearVelocity 3.0013677411799834e-07 4.906168857524888e-09 5.905880895807059e-07
+  angularVelocity -1.578227184700326e-08 1.0084293162600698e-06 4.748368421881057e-10
 }
 DEF gtl GenericTrafficLight {
   translation -34.665 55.2732 0
   startGreen FALSE
   greenTime 10
   redTime 10
-  state "green"
+  state "red"
 }
 CrossRoadsTrafficLight {
   translation 45 -45 0
@@ -3873,13 +3873,15 @@ BigSassafras {
   name "tree(19)"
 }
 PedestrianCrossing {
-  translation 45 -26 -0.06
+  translation 45 -26 -0.16
   rotation 0 0 1 -3.1415853071795863
+  enableBoundingObject FALSE
 }
 PedestrianCrossing {
-  translation -61.4608 45.0693 -0.06
+  translation -61.4608 45.0693 -0.16
   rotation 0 0 1 -1.5707853071795865
   name "pedestrian crossing(1)"
+  enableBoundingObject FALSE
 }
 CautionSign {
   translation -91.9275 48.9391 0
@@ -4051,16 +4053,16 @@ SpeedLimitSign {
   ]
 }
 TrafficCone {
-  translation -50.817355182102695 33.90679997856401 -0.004076718672611196
-  rotation -0.00027316372411817237 0.9999998490478575 0.00047674504885893886 0.013690792761077958
+  translation -50.81735518199945 33.90679997856283 -0.004076718672611057
+  rotation -0.0002731637273426857 0.9999998490476322 0.0004767455199298094 0.013690792761081807
   physics Physics {
     density -1
     mass 1
   }
 }
 TrafficCone {
-  translation -53.344755182102695 33.90679997856401 -0.004076718672611196
-  rotation -0.00027316372411817237 0.9999998490478575 0.00047674504885893886 0.013690792761077958
+  translation -53.34475518199945 33.90679997856283 -0.004076718672611057
+  rotation -0.0002731637273426857 0.9999998490476322 0.0004767455199298094 0.013690792761081807
   name "traffic cone(1)"
   physics Physics {
     density -1
@@ -4068,8 +4070,8 @@ TrafficCone {
   }
 }
 TrafficCone {
-  translation -48.168155182102694 34.009499978564016 -0.004076718672611196
-  rotation -0.00027316372411812623 0.9999998490478575 0.0004767450488589053 0.013690792761077958
+  translation -48.16815518199945 34.009499978562836 -0.004076718672611057
+  rotation -0.000273163727342666 0.9999998490476322 0.0004767455199297712 0.013690792761081807
   name "traffic cone(2)"
   physics Physics {
     density -1
@@ -4077,8 +4079,8 @@ TrafficCone {
   }
 }
 TrafficCone {
-  translation -45.10425447428081 26.35434520632112 -0.004076718672611196
-  rotation -0.00021751191052155224 0.9999707009283191 -0.007651795442577257 0.013691192026785025
+  translation -45.10425447417755 26.3543452063199 -0.004076718672611057
+  rotation -0.00021751191374696377 0.9999707009319225 -0.007651794971547152 0.013691192026736333
   name "traffic cone(3)"
   physics Physics {
     density -1
@@ -4086,8 +4088,8 @@ TrafficCone {
   }
 }
 TrafficCone {
-  translation -45.5603544742808 33.90824520632113 -0.004076718672611196
-  rotation -0.00021751191052175767 0.9999707009283191 -0.0076517954425721684 0.01369119202678502
+  translation -45.560354474177544 33.90824520631991 -0.004076718672611057
+  rotation -0.000217511913747097 0.9999707009319228 -0.007651794971542105 0.01369119202673633
   name "traffic cone(4)"
   physics Physics {
     density -1
@@ -4095,8 +4097,8 @@ TrafficCone {
   }
 }
 TrafficCone {
-  translation -45.09525518210269 16.183199978563223 -0.004076718672611196
-  rotation -0.0002731637241176996 0.9999998490478579 0.0004767450487932911 0.013690792761077954
+  translation -45.09525518199945 16.18319997856201 -0.004076718672611057
+  rotation -0.0002731637273423123 0.9999998490476325 0.0004767455198642398 0.013690792761081804
   name "traffic cone(5)"
   physics Physics {
     density -1
@@ -4104,8 +4106,8 @@ TrafficCone {
   }
 }
 TrafficCone {
-  translation -45.29575518210269 5.31033997856399 -0.004076718672611196
-  rotation -0.00027316372411786554 0.9999998490478577 0.00047674504879760484 0.013690792761077958
+  translation -45.295755181999446 5.310339978562809 -0.004076718672611057
+  rotation -0.00027316372734232074 0.9999998490476323 0.0004767455198685807 0.013690792761081805
   name "traffic cone(6)"
   physics Physics {
     density -1
@@ -4113,8 +4115,8 @@ TrafficCone {
   }
 }
 TrafficCone {
-  translation -44.78215518210269 -7.33915002143601 -0.004076718672611196
-  rotation -0.00027316372411786554 0.9999998490478577 0.00047674504879760484 0.013690792761077958
+  translation -44.78215518199945 -7.339150021437191 -0.004076718672611057
+  rotation -0.00027316372734232074 0.9999998490476323 0.0004767455198685807 0.013690792761081805
   name "traffic cone(7)"
   physics Physics {
     density -1
@@ -4122,8 +4124,8 @@ TrafficCone {
   }
 }
 TrafficCone {
-  translation 33.97404481789731 -53.76080002143599 -0.004076718672611196
-  rotation -0.00027316372411812623 0.9999998490478575 0.0004767450488589053 0.013690792761077958
+  translation 33.97404481800055 -53.76080002143717 -0.004076718672611057
+  rotation -0.000273163727342666 0.9999998490476322 0.0004767455199297712 0.013690792761081807
   name "traffic cone(8)"
   physics Physics {
     density -1
@@ -4131,8 +4133,8 @@ TrafficCone {
   }
 }
 TrafficCone {
-  translation 33.96964481789731 -51.43500002143599 -0.004076718672611196
-  rotation -0.0002731637241181564 0.9999998490478575 0.0004767450488589231 0.013690792761077958
+  translation 33.96964481800055 -51.43500002143717 -0.004076718672611057
+  rotation -0.00027316372734269273 0.9999998490476323 0.000476745519929792 0.013690792761081805
   name "traffic cone(9)"
   physics Physics {
     density -1
@@ -4140,8 +4142,8 @@ TrafficCone {
   }
 }
 TrafficCone {
-  translation 33.95354481789731 -48.95440002143599 -0.004076718672611196
-  rotation -0.0002731637241181434 0.9999998490478575 0.0004767450488589193 0.013690792761077958
+  translation 33.95354481800055 -48.954400021437166 -0.004076718672611057
+  rotation -0.00027316372734264297 0.9999998490476323 0.000476745519929791 0.013690792761081809
   name "traffic cone(10)"
   physics Physics {
     density -1
@@ -4149,8 +4151,8 @@ TrafficCone {
   }
 }
 TrafficCone {
-  translation 33.71714481789731 -45.723400021435985 -0.004076718672611196
-  rotation -0.00027316372411812623 0.9999998490478575 0.0004767450488589053 0.013690792761077958
+  translation 33.71714481800055 -45.723400021437165 -0.004076718672611057
+  rotation -0.000273163727342666 0.9999998490476322 0.0004767455199297712 0.013690792761081807
   name "traffic cone(11)"
   physics Physics {
     density -1
@@ -4158,8 +4160,8 @@ TrafficCone {
   }
 }
 TrafficCone {
-  translation -35.36085518210269 -30.233900021436774 -0.004076718672611196
-  rotation -0.0002731637241177 0.9999998490478579 0.0004767450487932107 0.013690792761077954
+  translation -35.36085518199945 -30.23390002143799 -0.004076718672611057
+  rotation -0.0002731637273422439 0.9999998490476323 0.0004767455198641515 0.013690792761081809
   name "traffic cone(12)"
   physics Physics {
     density -1
@@ -4167,8 +4169,8 @@ TrafficCone {
   }
 }
 TrafficCone {
-  translation -42.32475518210269 -18.608400021436776 -0.004076718672611196
-  rotation -0.0002731637241176868 0.9999998490478578 0.0004767450487931453 0.013690792761077954
+  translation -42.32475518199945 -18.60840002143799 -0.004076718672611057
+  rotation -0.00027316372734233636 0.9999998490476325 0.0004767455198640936 0.013690792761081804
   name "traffic cone(13)"
   physics Physics {
     density -1
@@ -4176,8 +4178,8 @@ TrafficCone {
   }
 }
 TrafficCone {
-  translation -26.68575518210282 -38.23720002143599 -0.004076718672611196
-  rotation -0.0002731637241181286 0.9999998490478575 0.00047674504886166535 0.013690792761077958
+  translation -26.685755181999593 -38.23720002143717 -0.004076718672611057
+  rotation -0.00027316372734260215 0.9999998490476323 0.00047674551993255224 0.013690792761081809
   name "traffic cone(14)"
   physics Physics {
     density -1
@@ -4185,8 +4187,8 @@ TrafficCone {
   }
 }
 TrafficCone {
-  translation -13.726455182103338 -43.78640002143599 -0.004076718672611196
-  rotation -0.0002731637241182602 0.9999998490478575 0.00047674504885827175 0.013690792761077958
+  translation -13.726455182000128 -43.78640002143717 -0.004076718672611057
+  rotation -0.00027316372734282094 0.9999998490476322 0.00047674551992921865 0.013690792761081837
   name "traffic cone(15)"
   physics Physics {
     density -1
@@ -4194,8 +4196,8 @@ TrafficCone {
   }
 }
 TrafficCone {
-  translation -1.3851451821030902 -44.86730002143599 -0.004076718672611196
-  rotation -0.0002731637241183539 0.9999998490478577 0.0004767450488653643 0.013690792761077967
+  translation -1.385145181999868 -44.86730002143717 -0.004076718672611057
+  rotation -0.00027316372734278364 0.9999998490476323 0.0004767455199362317 0.013690792761081864
   name "traffic cone(16)"
   physics Physics {
     density -1
@@ -4203,8 +4205,8 @@ TrafficCone {
   }
 }
 TrafficCone {
-  translation 11.217444817896661 -44.895500021435986 -0.004076718672611196
-  rotation -0.0002731637241182602 0.9999998490478575 0.00047674504885827175 0.013690792761077958
+  translation 11.217444817999871 -44.895500021437165 -0.004076718672611057
+  rotation -0.00027316372734282094 0.9999998490476322 0.00047674551992921865 0.013690792761081837
   name "traffic cone(17)"
   physics Physics {
     density -1
@@ -4212,8 +4214,8 @@ TrafficCone {
   }
 }
 TrafficCone {
-  translation 22.15304481789718 -44.815200021435984 -0.004076718672611196
-  rotation -0.0002731637241181261 0.9999998490478577 0.00047674504886158637 0.01369079276107796
+  translation 22.153044818000406 -44.815200021437164 -0.004076718672611057
+  rotation -0.0002731637273426652 0.9999998490476322 0.0004767455199324717 0.013690792761081812
   name "traffic cone(18)"
   physics Physics {
     density -1
@@ -4261,8 +4263,8 @@ HighwayPole {
   ]
 }
 OilBarrel {
-  translation -110.31684 -66.875162 0.5998773750000002
-  rotation 1.920935876826805e-19 -7.555253420014316e-20 1 3.14159
+  translation -110.31684 -66.875162 0.5998773750000044
+  rotation 2.986402261069081e-19 -1.8627615219753475e-19 1 3.14159
   height 1.2
   radius 0.4
   physics Physics {
@@ -4273,8 +4275,8 @@ OilBarrel {
   }
 }
 OilBarrel {
-  translation -107.04991 -33.037806 0.5998773750000002
-  rotation 4.456613317751495e-19 -2.641369310308998e-19 1 3.14159
+  translation -107.04991 -33.037806 0.5998773750000044
+  rotation 3.1334462682995067e-19 2.5709718902488834e-21 1 3.14159
   name "oil barrel(1)"
   height 1.2
   radius 0.4
@@ -4286,8 +4288,8 @@ OilBarrel {
   }
 }
 OilBarrel {
-  translation -103.169 -54.770003 0.5998773750000002
-  rotation 4.456613317751495e-19 -2.641369310308998e-19 1 3.14159
+  translation -103.169 -54.770003 0.5998773750000044
+  rotation 3.1334462682995067e-19 2.5709718902488834e-21 1 3.14159
   name "oil barrel(2)"
   height 1.2
   radius 0.4
@@ -4299,8 +4301,8 @@ OilBarrel {
   }
 }
 OilBarrel {
-  translation -45 -105.104 0.5998773750000002
-  rotation -9.009713423335335e-19 -2.06012326678097e-19 -0.9999999999999999 1.5707953071795862
+  translation -45 -105.104 0.5998773750000043
+  rotation 1.0144213475809806e-18 2.258630899412753e-20 -0.9999999999999999 1.5707953071795862
   name "oil barrel(3)"
   height 1.2
   radius 0.4
@@ -4312,8 +4314,8 @@ OilBarrel {
   }
 }
 OilBarrel {
-  translation -21.3988 -45.2699 0.5998773750000002
-  rotation -5.58644939848196e-20 1.956798307173225e-19 -1 1.1781
+  translation -21.3988 -45.2699 0.5998773750000044
+  rotation 7.315171903985108e-19 -5.657253544285055e-19 -1 1.1781
   name "oil barrel(4)"
   height 1.2
   radius 0.4
@@ -4325,8 +4327,8 @@ OilBarrel {
   }
 }
 OilBarrel {
-  translation -22.9161 -45.3401 0.5998773750000002
-  rotation -6.390466643991187e-20 -2.70425365204173e-19 1 1.9634953071795869
+  translation -22.9161 -45.3401 0.5998773750000044
+  rotation -5.601973227693472e-19 -2.880816792665283e-19 1 1.9634953071795869
   name "oil barrel(5)"
   height 1.2
   radius 0.4
@@ -4338,8 +4340,8 @@ OilBarrel {
   }
 }
 OilBarrel {
-  translation -22.1326 -45.7229 0.5998773750000002
-  rotation 0.002855329050765059 -0.015925309534887976 0.9998691072396575 2.8425894749697227e-17
+  translation -22.1326 -45.7229 0.5998773750000044
+  rotation -0.016733208059249167 0.03574196687229963 0.9992209523184276 2.987019723307057e-17
   name "oil barrel(6)"
   height 1.2
   radius 0.4
@@ -4351,8 +4353,8 @@ OilBarrel {
   }
 }
 OilBarrel {
-  translation -48.6853 20.1904 0.599877375
-  rotation 2.8999198295788643e-19 -1.2297299083086033e-19 1 3.01069
+  translation -48.6853 20.1904 0.5998773750000043
+  rotation -8.737331651730032e-20 -2.5815460049247747e-19 1 3.01069
   name "oil barrel(7)"
   height 1.2
   radius 0.4
