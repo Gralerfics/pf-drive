@@ -23,6 +23,11 @@ from pf_drive.util.img import NCC_horizontal_match, np_to_Image
         format:
             (type = 'vw', v, w)
             (type = 'vphi', v, phi)
+    TODO:
+        1. 预测量的参数似乎应该使用距离而非 goal 个数, 否则有与 record 打点距离耦合的问题. 例如录制时转小弯打点密集但距离不远;
+        2. RB 太近时旋转校正容易幅度过大, 加上转弯减速, 校正速度相对 pass 速度过快时; R 偏离 AB 过多时 AlongpathCorrection 会导致 B 估计严重侧移, 非常不稳定不安全 (考虑提早切换下一点; 考虑计算 R 到 AB 垂直偏移).
+        3. 使用视觉里程计 (打滑确实比较常见; 局部轨迹更可信; ...).
+        4. 权重设置 (r + 1 给 0.0).
 """
 class BaselineRepeatController(Node):
     def __init__(self, name, **kwargs):
@@ -33,8 +38,9 @@ class BaselineRepeatController(Node):
         self.along_path_radius = kwargs['along_path_radius'] # r
         self.steering_predict_goals = kwargs['steering_predict_goals'] # p, 注意弯道的相对位置并没有补偿误差, p 过大会导致转向轨迹太贴近 record 中有误差的值.
         self.steering_weights = kwargs['steering_weights']
-        self.slowing_predict_goals = kwargs['slowing_predict_goals'] # s, TODO: 预测量的参数似乎应该使用距离而非 goal 个数, 否则有与 record 打点距离耦合的问题
+        self.slowing_predict_goals = kwargs['slowing_predict_goals'] # s
 
+        self.correction_distance_interval = kwargs['correction_distance_interval']
         self.k_rotation = kwargs['k_rotation']
         self.k_along_path = kwargs['k_along_path']
 
@@ -73,6 +79,8 @@ class BaselineRepeatController(Node):
         self.q = ListQueue(size = self.q_size) # (image, odom)
 
         # 运行时
+        self.last_correction_distance = 0.0
+        
         self.goal_distances = [0.0] # distances between goal 0 and i
         self.goal_idx = -self.max_rps - 1 # goal just passed
 
@@ -157,7 +165,7 @@ class BaselineRepeatController(Node):
             self.pass_to_next_goal()
 
         # 主循环
-        timer_fps = timer_P = time.time()
+        timer_fps = timer_correction = time.time()
         operation_num = 0
         while not ros.is_shutdown():
             current_time = time.time()
@@ -166,14 +174,12 @@ class BaselineRepeatController(Node):
                 operation_num = 0
                 timer_fps = current_time
 
-            # 结束
-            if self.q[r] is not None and self.q[r + 1] is None:
+            if self.q[r] is not None and self.q[r + 1] is None: # 结束
                 print('Finished.')
                 self.io['passed_goal'].write(None) # 结束信号
                 # self.io['actuator_command'].write(('vw', 0, 0)) # 由 __main__ 进行停车
                 break
             
-            # 运算
             if self.io['processed_image'].poll() and self.io['odom'].poll():
                 image = self.io['processed_image'].read()
                 odom = self.io['odom'].read() # odom, R: robot
@@ -194,18 +200,23 @@ class BaselineRepeatController(Node):
                 l_odomA_odomB = t3d_ext.norm(t_odomA_odomB)
                 l_odomR_odomB = t3d_ext.norm(t_odomR_odomB)
 
-                turning_goal = l_odomA_odomB < self.distance_threshold # TODO: 需要吗?
-                if not turning_goal:
-                    l_proj_odomA_odomR = np.dot(t_odomA_odomR, t_odomA_odomB) / l_odomA_odomB
-                    u = l_proj_odomA_odomR / l_odomA_odomB # not turning_goal
+                l_proj_odomA_odomR = np.dot(t_odomA_odomR, t_odomA_odomB) / l_odomA_odomB
+                u = l_proj_odomA_odomR / l_odomA_odomB # not turning_goal
 
-                    dt = current_time - timer_P
-                    timer_P = current_time
+                # 到达下一个目标
+                if u > 1.0 - 1e-2 or l_odomR_odomB < self.distance_threshold:
+                    self.pass_to_next_goal()
+                    continue
 
-                    # 到达下一个目标
-                    if u > 1.0 - 1e-2 or l_odomR_odomB < self.distance_threshold:
-                        self.pass_to_next_goal()
-                        continue
+                # 校正 (固定间隔距离 correction_distance_interval 更新)
+                # turning_goal = l_odomA_odomB < self.distance_threshold
+                current_distance = self.goal_distances[i] + l_proj_odomA_odomR
+                if current_distance - self.last_correction_distance > self.correction_distance_interval: # not turning_goal:
+                    self.last_correction_distance = current_distance
+
+                    # 计时器 (未使用, 可计算 correction 帧率)
+                    dt = current_time - timer_correction
+                    timer_correction = current_time
 
                     # 沿路径校正
                     scan_q_indices = [q_idx for q_idx in range(2 * r + 1) if self.q[q_idx] is not None]
@@ -235,24 +246,19 @@ class BaselineRepeatController(Node):
                     scan_values[np.abs(np.arange(len(scan_values)) - scan_values.argmax()) > 1] = 0 # 保留最值和相邻项 (保证相邻)
                     scan_values[scan_values < scan_values[scan_values != scan_values.max()].max()] = 0 # 在此基础上再保留最大和次大值
                     delta_p_distance = scan_values / scan_values.sum() @ scan_distances
-
-                    along_path_correction = (l_odomR_odomB - self.k_along_path * dt * delta_p_distance) / l_odomR_odomB
+                    along_path_correction = (l_odomR_odomB - self.k_along_path * delta_p_distance) / l_odomR_odomB
                     
                     if self.along_path_debug_image_topic is not None: # [debug]
                         h, w = image.shape[0] + 5, image.shape[1]
-                        
                         image_pad = np.concatenate((dash_img, image, dash_img), axis = 0)
                         image_pad = np.pad(image_pad, ((0, 0), (0, label_w)), mode = 'constant', constant_values = 0)
                         image_pad[[dash_h // 2, -dash_h // 2], :] = 255
-
                         debug_img = np.pad(debug_img, ((0, 0), (0, label_w)), mode = 'constant', constant_values = 0)
                         for k, q_idx in enumerate(scan_q_indices):
                             debug_img[(k * h):(k * h + h), w:] = int(255 * scan_values[k] / scan_values.max())
-
-                        debug_img = np.concatenate((debug_img[:(r * h - dash_h), :], image_pad, debug_img[(r * h):, :]), axis = 0)
-
+                        debug_img = np.concatenate((debug_img[:(r * h + h - dash_h), :], image_pad, debug_img[(r * h + h):, :]), axis = 0)
                         ros.publish_topic(self.along_path_debug_image_topic, np_to_Image(debug_img))
-
+                    
                     # print('scan_q_indices', scan_q_indices) # [debug]
                     # print('scan_distances', scan_distances)
                     # print('scan_offsets', scan_offsets)
@@ -262,11 +268,17 @@ class BaselineRepeatController(Node):
                     # print('apc', along_path_correction)
                     # print('\n')
 
-                    # 转向校正, TODO: RB 太近时旋转校正容易幅度过大, 加上转弯减速, 校正速度相对 pass 速度过快时
+                    # 转向校正
                     theta_A = scan_offsets[k_r] / image.shape[1] * self.horizontal_fov
                     theta_B = scan_offsets[k_r + 1] / image.shape[1] * self.horizontal_fov
                     theta_R = (1 - u) * theta_A + u * theta_B
-                    rotation_correction = -self.k_rotation * dt * theta_R
+                    rotation_correction = -self.k_rotation * theta_R
+
+                    # print('theta_A', theta_A) # [debug]
+                    # print('theta_B', theta_B)
+                    # print('theta_R', theta_R)
+                    # print('rc', rotation_correction)
+                    # print('\n')
 
                     # 优化 T_0_odomB
                     correction_offset = t3d_ext.etR([0, 0, 0], t3d.euler.euler2mat(0, 0, rotation_correction)) @ T_odomR_odomB
@@ -287,6 +299,7 @@ class BaselineRepeatController(Node):
                     # 限制最小旋转半径
                     flag = abs(R) < self.R_min_abs
                     R[flag] = np.sign(R[flag]) * self.R_min_abs
+                    R_min = np.abs(R).min()
 
                     # 旋转半径的倒数 (便于加权平均, 若使用 R 需要考虑 inf 等)
                     w_normal = 1 / R
@@ -306,7 +319,7 @@ class BaselineRepeatController(Node):
                 with np.errstate(divide = 'ignore', invalid = 'ignore'):
                     phis_abs = np.abs(np.arccos(np.clip(np.sum(vs[:-1] * vs[1:], axis = 1) / (ls[:-1] * ls[1:]), -1.0, 1.0)))
                     Rs_abs = self.d / np.tan(phis_abs)
-                    R_min = Rs_abs.min()
+                    R_min = min(R_min, Rs_abs.min()) # 也要算上实际执行中的最小半径 TODO
                 
                 if np.isnan(R_min):
                     v_target = v_full

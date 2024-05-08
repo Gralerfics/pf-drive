@@ -18,14 +18,15 @@
     },
     "along_path_radius": 4,
     "steering_predict_goals": 5,
-    "steering_weights": [0.0, 1.0, 0.3, 0.1, 0.05, 0.03, 0.02, 0.01],
+    "steering_weights": [0.0, 1.0, 0.8, 0.1, 0.05, 0.03, 0.02, 0.01],
     "slowing_predict_goals": 15,
-    "k_rotation": 0.04,
-    "k_along_path": 1.0,
+    "correction_distance_interval": 3.0,
+    "k_rotation": 0.008,
+    "k_along_path": 0.04,
     "odom_compensation_rotation_update_rate": 0.0,
-    "odom_compensation_translation_update_rate": 0.4,
+    "odom_compensation_translation_update_rate": 0.3,
     "odom_compensation_rotation_threshold": 0.02,
     "odom_compensation_translation_threshold": 0.1,
     "distance_threshold": 0.5,
-    "reference_velocity": 15.0
+    "reference_velocity": 20.0
 }
