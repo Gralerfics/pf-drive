@@ -262,7 +262,7 @@ class BaselineRepeatController(Node):
                     # print('apc', along_path_correction)
                     # print('\n')
 
-                    # 转向校正
+                    # 转向校正, TODO: RB 太近时旋转校正容易幅度过大, 加上转弯减速, 校正速度相对 pass 速度过快时
                     theta_A = scan_offsets[k_r] / image.shape[1] * self.horizontal_fov
                     theta_B = scan_offsets[k_r + 1] / image.shape[1] * self.horizontal_fov
                     theta_R = (1 - u) * theta_A + u * theta_B
@@ -311,7 +311,8 @@ class BaselineRepeatController(Node):
                 if np.isnan(R_min):
                     v_target = v_full
                 else:
-                    v_target = np.clip(np.sqrt(self.friction_factor * R_min), v_under, v_full)
+                    v_target = np.clip(np.sqrt(self.friction_factor * R_min), v_under, v_full) # 弯道减速
+                    v_target = v_target * len(s_indices) / (r + rps + 1) # 起讫点减速
                 
                 w_target = v_target * w_normal_hat
                 if np.isnan(w_target):
