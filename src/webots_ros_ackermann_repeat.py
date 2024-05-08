@@ -65,6 +65,7 @@ track = fetch(config, ['world', 'car', 'track'], 1.628)
 wheelbase = fetch(config, ['world', 'car', 'wheelbase'], 2.995)
 wheel_radius = fetch(config, ['world', 'car', 'wheel_radius'], 0.38)
 max_steering_angle = fetch(config, ['world', 'car', 'max_steering_angle'], 0.6)
+friction_factor = fetch(config, ['world', 'car', 'friction_factor'], 15)
 
 along_path_radius = fetch(config, ['along_path_radius'], 2)
 steering_predict_goals = fetch(config, ['steering_predict_goals'], 5)
@@ -72,10 +73,10 @@ steering_weights = fetch(config, ['steering_weights'], [0.0, 1.0, 0.6, 0.1, 0.05
 slowing_predict_goals = fetch(config, ['slowing_predict_goals'], 15)
 k_rotation = fetch(config, ['k_rotation'], 0.03)
 k_along_path = fetch(config, ['k_along_path'], 0.01)
-initial_compensation_rotation_update_rate = fetch(config, ['initial_compensation_rotation_update_rate'], 0.0)
-initial_compensation_translation_update_rate = fetch(config, ['initial_compensation_translation_update_rate'], 0.2)
-initial_compensation_rotation_threshold = fetch(config, ['initial_compensation_rotation_threshold'], 0.15)
-initial_compensation_translation_threshold = fetch(config, ['initial_compensation_translation_threshold'], 0.1)
+odom_compensation_rotation_update_rate = fetch(config, ['odom_compensation_rotation_update_rate'], 0.0)
+odom_compensation_translation_update_rate = fetch(config, ['odom_compensation_translation_update_rate'], 0.2)
+odom_compensation_rotation_threshold = fetch(config, ['odom_compensation_rotation_threshold'], 0.15)
+odom_compensation_translation_threshold = fetch(config, ['odom_compensation_translation_threshold'], 0.1)
 distance_threshold = fetch(config, ['distance_threshold'], 0.2)
 reference_velocity = fetch(config, ['reference_velocity'], 10.0)
 
@@ -103,17 +104,22 @@ controller = BaselineRepeatController('controller',
     slowing_predict_goals = slowing_predict_goals,
     k_rotation = k_rotation,
     k_along_path = k_along_path,
-    initial_compensation_rotation_update_rate = initial_compensation_rotation_update_rate,
-    initial_compensation_translation_update_rate = initial_compensation_translation_update_rate,
-    initial_compensation_rotation_threshold = initial_compensation_rotation_threshold,
-    initial_compensation_translation_threshold = initial_compensation_translation_threshold,
+    odom_compensation_rotation_update_rate = odom_compensation_rotation_update_rate,
+    odom_compensation_translation_update_rate = odom_compensation_translation_update_rate,
+    odom_compensation_rotation_threshold = odom_compensation_rotation_threshold,
+    odom_compensation_translation_threshold = odom_compensation_translation_threshold,
     track = track,
     wheelbase = wheelbase,
     wheel_radius = wheel_radius,
     max_steering_angle = max_steering_angle,
+    friction_factor = friction_factor,
     distance_threshold = distance_threshold,
     reference_velocity = reference_velocity,
-    along_path_debug_image_topic = '/debug_img'
+    along_path_debug_image_topic = '/debug_img',
+    local_raw_path_debug_topic = '/recorded_odoms',
+    odom_a_debug_topic = '/a',
+    odom_b_debug_topic = '/b',
+    odom_r_debug_topic = '/r'
 )
 actuator_computer = WebotsROSAckermannActuatorComputer('actuator_computer',
     fetch(config, ['world', 'get_time_srv'], '/car/robot/get_time'),
@@ -257,12 +263,25 @@ while not ros.is_shutdown():
                         f.write(t3d_ext.e2kitti(gt_pose) + '\n')
                 with open(os.path.join(report_path, 'parameters.json'), 'w') as f:
                     json.dump({
+                        'car': {
+                            'track': track,
+                            'wheelbase': wheelbase,
+                            'wheel_radius': wheel_radius,
+                            'max_steering_angle': max_steering_angle,
+                            'friction_factor': friction_factor
+                        },
                         'along_path_radius': along_path_radius,
                         'steering_predict_goals': steering_predict_goals,
+                        'steering_weights': steering_weights,
+                        'slowing_predict_goals': slowing_predict_goals,
                         'k_rotation': k_rotation,
                         'k_along_path': k_along_path,
+                        'odom_compensation_rotation_update_rate': odom_compensation_rotation_update_rate,
+                        'odom_compensation_translation_update_rate': odom_compensation_translation_update_rate,
+                        'odom_compensation_rotation_threshold': odom_compensation_rotation_threshold,
+                        'odom_compensation_translation_threshold': odom_compensation_translation_threshold,
                         'distance_threshold': distance_threshold,
-                        # TODO: 后加的参数存一下
+                        'reference_velocity': reference_velocity
                     }, f)
                 break
             else:

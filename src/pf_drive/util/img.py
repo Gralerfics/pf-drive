@@ -73,21 +73,19 @@ def NCC_horizontal_scan(img, img_ref):
 def NCC_horizontal_match(img, img_ref):
     values = NCC_horizontal_scan(img, img_ref)
     offset = np.argmax(values)
-    return int(offset - (len(values) - 1) / 2), values[offset]
+    return int(offset - (len(values) - 1) / 2), values[offset], values[int((len(values) - 1) / 2)]
 
 # propective_offset = 70 # positive: counter-clockwise (objects move right from img_ref to img)
 
 # img_ref = np.random.rand(50, 150)
 # if propective_offset > 0:
-#     # img = np.concatenate((img_ref[:, (150 - propective_offset):], img_ref[:,:(150 - propective_offset)]), axis = 1)
 #     img = np.concatenate((np.zeros((50, propective_offset)), img_ref[:,:(150 - propective_offset)]), axis = 1)
 # else:
-#     # img = np.concatenate((img_ref[:, -propective_offset:], img_ref[:, :-propective_offset]), axis = 1)
 #     img = np.concatenate((img_ref[:, -propective_offset:], np.zeros((50, -propective_offset))), axis = 1)
 
 # t = time.time()
 # for i in range(5):
 #     l = NCC_horizontal_match(img, img_ref)
 # print(time.time() - t)
-# print((int(l[0]), l[1]))
+# print((int(l[0]), l[1], l[2]))
 

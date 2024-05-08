@@ -33,7 +33,6 @@ class Cable:
                 self.event.set()
         elif cable_type == 'rpc': # size: int
             self.queue = Queue(maxsize = self.size)
-            # TODO: 反馈队列
         else:
             raise MultinodesException('Invalid cable type.')
         
@@ -55,11 +54,11 @@ class Cable:
         elif self.cable_type == 'event':
             self.event.set() if bool(data) else self.event.clear()
         elif self.cable_type == 'rpc':
-            self.queue.put(data, block = block) # TODO: 加上 seq 标号
+            self.queue.put(data, block = block)
     
     def feedback(self, data): # only for the sender in rpc
         if self.cable_type == 'rpc':
-            pass # TODO: 取反馈队列的数据和 seq 标号
+            pass
 
     def read(self, block = True):
         if self.cable_type == 'pipe':
@@ -78,7 +77,7 @@ class Cable:
         elif self.cable_type == 'event':
             return self.event.is_set()
         elif self.cable_type == 'rpc':
-            return self.queue.get(block = block) # TODO: 分别取命令部分和 seq 标号
+            return self.queue.get(block = block)
     
     def poll(self):
         if self.cable_type == 'pipe':

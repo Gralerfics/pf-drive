@@ -139,7 +139,7 @@ class WebotsROSAckermannActuatorComputer(Node):
         last_time = current_time
         while not self.ros.is_shutdown():
             # 处理 ROS 消息回调
-            self.ros.spin_once(0.01) # TODO: 不加也能正常订阅, why, 因为有其他进程在 spin?
+            self.ros.spin_once(0.01) # 不加也能正常订阅, 为什么? 因为有其他进程在 spin?
 
             # 里程计 (不受 command 影响, 有无 command 都会计算里程计)
             current_time = self.get_time()
