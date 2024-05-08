@@ -27,7 +27,6 @@ from pf_drive.util.img import NCC_horizontal_match, np_to_Image
         1. 预测量的参数似乎应该使用距离而非 goal 个数, 否则有与 record 打点距离耦合的问题. 例如录制时转小弯打点密集但距离不远;
         2. RB 太近时旋转校正容易幅度过大, 加上转弯减速, 校正速度相对 pass 速度过快时; R 偏离 AB 过多时 AlongpathCorrection 会导致 B 估计严重侧移, 非常不稳定不安全 (考虑提早切换下一点; 考虑计算 R 到 AB 垂直偏移).
         3. 使用视觉里程计 (打滑确实比较常见; 局部轨迹更可信; ...).
-        4. 权重设置 (r + 1 给 0.0).
 """
 class BaselineRepeatController(Node):
     def __init__(self, name, **kwargs):

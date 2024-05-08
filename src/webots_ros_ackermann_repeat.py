@@ -118,7 +118,7 @@ controller = BaselineRepeatController('controller',
     distance_threshold = distance_threshold,
     reference_velocity = reference_velocity,
     along_path_debug_image_topic = '/debug_img',
-    local_raw_path_debug_topic = '/recorded_odoms',
+    local_raw_path_debug_topic = '/local_recorded_odoms',
     odom_a_debug_topic = '/a',
     odom_b_debug_topic = '/b',
     odom_r_debug_topic = '/r'
@@ -301,6 +301,6 @@ while not ros.is_shutdown():
         ros.publish_tf(T_map_odom, 'map', 'odom')
         
         # 路径调试话题
-        # ros.publish_topic('/recorded_odoms', record_odom_path)
+        ros.publish_topic('/recorded_odoms', record_odom_path)
         ros.publish_topic('/recorded_gts', record_gt_pose_path)
 
