@@ -1,6 +1,8 @@
 # pf-drive
 Path following navigation.
 
+![screenshot](doc/screenshot.png)
+
 ## Information
 
 **Language**: Python
@@ -9,9 +11,15 @@ Path following navigation.
 
 **Simulator**: Webots
 
+## Reference
+
+Dall’Osto, D., Fischer, T., & Milford, M. (2020). Fast and Robust Bio-inspired Teach and Repeat Navigation. *2021 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)*, 500-507.
+
 ## Structure
 
-TODO
+![arch](doc/arch.png)
+
+(TODO)
 
 ## Usages
 
